@@ -16,6 +16,11 @@ import sys
 import webbrowser
 import unicodedata
 
+from sgtk.platform.qt import QtCore
+from subprocess import check_output
+
+def get_pid(name):
+    return int(check_output(["pidof", "-s", name]))
 
 class PanelGenerator(object):
     """
@@ -25,6 +30,9 @@ class PanelGenerator(object):
         self._engine = engine
         self._dialogs = []
         self._ui = self._engine.ui
+
+        #self._ui.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
+        self._ui.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
         # engine_root_dir = self._engine.disk_location
 
     ############################################################################
@@ -45,7 +53,7 @@ class PanelGenerator(object):
         for (cmd_name, cmd_details) in self._engine.commands.items():
             panel_items.append(AppCommand(cmd_name, cmd_details))
 
-        self._engine.log_debug("panel_items: %s", panel_items)
+        self._engine.logger.debug("panel_items: %s", panel_items)
 
         # now go through all of the panel items.
         # separate them out into various sections
@@ -86,7 +94,6 @@ class PanelGenerator(object):
         self._ui.add_button("Show Log", self._handle_show_log)
 
     def _handle_show_log(self):
-        from sgtk.platform.qt import QtCore
         app = QtCore.QCoreApplication.instance()
         win = app.property('tk-syntheyes.log_console')
         win.setHidden(False)
@@ -144,7 +151,6 @@ class PanelGenerator(object):
                 # or the name of the panel item? Not sure.
                 cmd_obj = commands_by_app[app_name][0]
                 cmd_obj.add_button()
-
 
 class AppCommand(object):
     """

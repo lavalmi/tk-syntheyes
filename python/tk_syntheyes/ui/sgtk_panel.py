@@ -8,13 +8,15 @@
 # agreement to the MIT License. All rights not expressly granted therein are
 # reserved by Sebastian Kral.
 
-from PySide import QtCore
-from PySide import QtGui
-
+from sgtk.platform.qt import QtCore
+from sgtk.platform.qt import QtGui
 
 class Ui_SgtkPanel(QtGui.QDialog):
     def __init__(self, parent=None):
         super(Ui_SgtkPanel, self).__init__(parent)
+
+        # Minimize this window instead of closing it
+        self._minimize_on_close = True
 
         self.setMinimumSize(200, 200)
         self.setWindowTitle("SGTK Panel")
@@ -33,8 +35,12 @@ class Ui_SgtkPanel(QtGui.QDialog):
             self.move(pos)
 
     def closeEvent(self, event):
-        self.settings.setValue("pos", self.pos())
-        event.accept()
+        if self._minimize_on_close:
+            self.setWindowState(QtCore.Qt.WindowMinimized)
+            event.ignore()
+        else:
+            self.settings.setValue("pos", self.pos())
+            event.accept()
 
     def add_button(self, name, command):
         button = QtGui.QPushButton(name, self)

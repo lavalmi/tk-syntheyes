@@ -9,12 +9,14 @@
 # reserved by Sebastian Kral.
 
 # log console
-import cgi
+import html
 import logging
-from syntheyes import callback_event
 
-from PySide import QtGui
-from PySide import QtCore
+from .util import callback_event
+
+from sgtk.platform.qt import QtGui
+from sgtk.platform.qt import QtCore
+from builtins import str
 
 COLOR_MAP = {
     'CRITICAL': 'indianred',
@@ -43,23 +45,12 @@ class QtLogHandler(logging.Handler):
 
     def emit(self, record):
         message = self.formatter.format(record)
-        clean = 'Unable to decode message'
-        for charset in ("utf-8", 'latin-1', 'iso-8859-1', 'us-ascii',
-                        'windows-1252'):
-            try:
-                clean = cgi.escape(unicode(message,
-                                           charset)).encode('ascii',
-                                                            'xmlcharrefreplace')
-                break
-            except Exception:
-                continue
-
-        for (k, v) in COLOR_MAP.iteritems():
-            if ('[%s]' % k) in clean:
-                clean = '<font color="%s">%s</font>' % (v, clean)
+        for (k, v) in COLOR_MAP.items():
+            if ('[%s]' % k) in message:
+                message = '<font color="%s">%s</font>' % (v, message)
                 break
         callback_event.send_to_main_thread(append_to_log, self.widget,
-                                           "<pre>%s</pre>" % clean)
+                                           "<pre>%s</pre>" % message)
 
 
 class LogConsole(QtGui.QWidget):

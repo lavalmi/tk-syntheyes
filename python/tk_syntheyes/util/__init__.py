@@ -13,7 +13,7 @@ import os
 import sys
 import logging
 
-import SyPy
+import SyPy3
 
 # Constants
 SGTK_SYNTHEYES_PORT = 'SGTK_SYNTHEYES_PORT'
@@ -46,6 +46,6 @@ sys.execpthook = logging_excepthook
 def get_existing_connection():
     port = int(os.environ[SGTK_SYNTHEYES_PORT])
     pin = os.environ[SGTK_SYNTHEYES_PIN]
-    hlev = SyPy.SyLevel()
+    hlev = SyPy3.SyLevel()
     hlev.OpenExisting(port, pin)
     return hlev
