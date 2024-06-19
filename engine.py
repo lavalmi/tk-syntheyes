@@ -27,6 +27,9 @@ from sgtk.platform import Engine
 import SyPy3
 import builtins
 
+sys.path.append(os.path.dirname(__file__))
+from helper_functions import strtobool
+
 # Although the engine has logging already, this logger is needed for callback based logging
 # where an engine may not be present.
 logger = sgtk.LogManager.get_logger(__name__)
@@ -127,7 +130,7 @@ class SynthEyesEngine(Engine):
             raise sgtk.TankError("SynthEyes port:%d and pin:%s are not valid.", self._port, self._pin)
         
         self.hlev: SyPy3.sylevel.SyLevel = SyPy3.SyLevel()
-        if not builtins.DEBUG:
+        if not strtobool(getattr(builtins, "DEBUG", None)):
             if not self.hlev.OpenExisting(self._port, self._pin):
                 raise sgtk.TankError("Could not open existing instance of SynthEyes with port:%s and pin:%s.", self._port, self._pin)
 
@@ -169,15 +172,6 @@ class SynthEyesEngine(Engine):
         QtCore.QTextCodec.setCodecForCStrings(utf8)
         self.logger.debug("set utf-8 codec for widget text")
 
-        # Initialize heartbeat
-        #try:
-        #    from syntheyes.heartbeat import Heartbeat
-        #    self.heartbeat = Heartbeat(self.logger)
-        #except Exception as e:
-        #    msg = ("Shotgun Pipeline Toolkit failed to initialize SynthEyes heartbeat: %s" % e)
-        #    self.logger.exception(msg)
-        #    raise sgtk.TankError(msg)
-
         # Create QApplication
         try:
             sys.argv[0] = 'Shotgun SynthEyes'
@@ -185,6 +179,7 @@ class SynthEyesEngine(Engine):
             self.qt_app.setQuitOnLastWindowClosed(True)
             res_dir = os.path.join(self.disk_location, "resources")
             self.qt_app.setWindowIcon(QtGui.QIcon(os.path.join(res_dir, "process_icon_256.png")))
+            self.qt_app
             self.qt_app.setApplicationName(sys.argv[0])
         except Exception as e:
             msg = "Could not create PySide app"
@@ -209,13 +204,26 @@ class SynthEyesEngine(Engine):
 
     def post_app_init(self):
         """
-        Called when all apps have initialized
+        Called when all apps have been initialized
         """
         import tk_syntheyes
         self._initialize_dark_look_and_feel()
         self._panel_generator = tk_syntheyes.PanelGenerator(self)
         self._panel_generator.populate_panel()
         self.ui.show()
+        self.init_heartbeat()
+
+    def init_heartbeat(self):
+        """
+        Initialize heartbeat to check if the engine is still connected to SynthEyes.
+        """
+        try:
+            from tk_syntheyes.util.heartbeat import Heartbeat
+            self.heartbeat = Heartbeat(self, self.logger)
+        except Exception as e:
+            msg = ("Shotgun Pipeline Toolkit failed to initialize SynthEyes heartbeat: %s" % e)
+            self.logger.exception(msg)
+            raise sgtk.TankError(msg)
 
     def destroy_engine(self):
         """
@@ -256,55 +264,6 @@ class SynthEyesEngine(Engine):
 
         # Clear the dictionary of SynthEyes panels to keep the garbage collector happy.
         self._syntheyes_panel_dict = {}
-
-    def show_dialog(self, title, *args, **kwargs):
-        """
-        If on Windows or Linux, this method will call through to the base implementation of
-        this method without alteration. On OSX, we'll do some additional work to ensure that
-        window parenting works properly, which requires some extra logic on that operating
-        system beyond setting the dialog's parent.
-
-        :param str title: The title of the dialog.
-
-        :returns: the created widget_class instance
-        """
-        if not sgtk.util.is_macos():
-            return super(SynthEyesEngine, self).show_dialog(title, *args, **kwargs)
-        else:
-            from sgtk.platform.qt import QtCore, QtGui
-
-            # create the dialog:
-            dialog, widget = self._create_dialog_with_widget(title, *args, **kwargs)
-
-            # When using the recipe here to get Z-depth ordering correct we also
-            # inherit another feature that results in window size and position being
-            # remembered. This size/pos retention happens across app boundaries, so
-            # we would end up with one app inheriting the size from a previously
-            # launched app, which was weird. To counteract that, we keep track of
-            # the dialog's size before SynthEyes gets ahold of it, and then resize it
-            # right after it's shown. We'll also move the dialog to the center of
-            # the desktop.
-            center_screen = (
-                QtGui.QApplication.desktop().availableGeometry(dialog).center()
-            )
-            self.__DIALOG_SIZE_CACHE[title] = dialog.size()
-
-            # TODO: Get an explanation and document why we're having to do this. It appears to be
-            # a SynthEyes-only solution, because similar problems in other integrations, namely Nuke,
-            # are not resolved in the same way. This fix comes to us from the SynthEyes dev team, but
-            # we've not yet spoken with someone that can explain why it fixes the problem.
-            dialog.setWindowFlags(QtCore.Qt.Window)
-            dialog.setProperty("saveWindowPref", True)
-            dialog.show()
-
-            # The resize has to happen after the dialog is shown, and we need
-            # to move the dialog after the resize, since center of screen will be
-            # relative to the final size of the dialog.
-            dialog.resize(self.__DIALOG_SIZE_CACHE[title])
-            dialog.move(center_screen - dialog.rect().center())
-
-            # lastly, return the instantiated widget
-            return widget
 
     def _init_pyside(self):
         """
@@ -495,9 +454,43 @@ class SynthEyesEngine(Engine):
 
         return self._win32_proxy_win
 
+    def check_connection(self):
+        """Check the connection status of SynthEyes."""
+        #if getattr(self, "hlev", None) and self.hlev.core:
+        #    return self.hlev.core.OK()
+        hlev = SyPy3.SyLevel()
+        if hlev.OpenExisting(self._port, self._pin):
+            r = hlev.core.OK()
+            #print(r)
+            return r
+        #print(False)
+        return False
+
     @property
     def has_ui(self):
-        """
-        Detect and return if syntheyes is running in batch mode
-        """
-        return False
+        """Return if SynthEyes' UI currently exists."""
+        return True
+    
+    ############################################################################
+    # logging
+
+    def _init_logging(self):
+        if self.get_setting("debug_logging", False):
+            self.logger.setLevel(logging.DEBUG)
+        else:
+            self.logger.setLevel(logging.INFO)
+
+    def log_debug(self, msg, *args, **kwargs):
+        self.logger.debug(msg, *args, **kwargs)
+
+    def log_info(self, msg, *args, **kwargs):
+        self.logger.info(msg, *args, **kwargs)
+
+    def log_warning(self, msg, *args, **kwargs):
+        self.logger.warning(msg, *args, **kwargs)
+
+    def log_error(self, msg, *args, **kwargs):
+        self.logger.error(msg, *args, **kwargs)
+
+    def log_exception(self, msg, *args, **kwargs):
+        self.logger.exception(msg, *args, **kwargs)

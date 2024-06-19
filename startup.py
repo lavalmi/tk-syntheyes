@@ -17,6 +17,8 @@ from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
 ### DEBUG ###
 import builtins
 builtins.DEBUG = os.environ.get("__DEBUG__")
+sys.path.append(os.path.dirname(__file__))
+from helper_functions import strtobool    
 #############
 
 class SynthEyesLauncher(SoftwareLauncher):
@@ -83,15 +85,15 @@ class SynthEyesLauncher(SoftwareLauncher):
         os.environ["SGTK_SYNTHEYES_PORT"] = str(port)
         os.environ["SGTK_SYNTHEYES_PIN"] = str(pin)
         self.logger.debug("SynthEyes will be started using port:%d and pin:%s.", port, pin)
-        
-        if not builtins.DEBUG:
+
+        if not strtobool(getattr(builtins, "DEBUG", None)):
             args = " ".join([args, '-port', str(port), '-pin', pin])
 
         # Run the engine's bootstrap.py file when SynthEyes starts up
         # by appending it to the start arguments
         startup_path = os.path.join(self.disk_location, "startup", "bootstrap.py")
         if startup_path:
-            if builtins.DEBUG:
+            if strtobool(getattr(builtins, "DEBUG", None)):
                 args = " ".join([args, startup_path])
             else:
                 args = " ".join([args, "-start", startup_path])
@@ -156,7 +158,7 @@ class SynthEyesLauncher(SoftwareLauncher):
             required_env["SGTK_ENGINE"] = self.engine_name
             required_env["SGTK_CONTEXT"] = sgtk.context.serialize(self.context)
 
-        if not builtins.DEBUG and file_to_open:
+        if not strtobool(getattr(builtins, "DEBUG", None)) and file_to_open:
             # Add the file name to open to the launch arguments
             args = " ".join(file_to_open)
 

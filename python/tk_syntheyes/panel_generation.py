@@ -53,6 +53,8 @@ class PanelGenerator(object):
         for (cmd_name, cmd_details) in self._engine.commands.items():
             panel_items.append(AppCommand(cmd_name, cmd_details))
 
+        panel_items.sort(key=lambda c: c.name)
+
         self._engine.logger.debug("panel_items: %s", panel_items)
 
         # now go through all of the panel items.
@@ -194,7 +196,7 @@ class AppCommand(object):
             app = self.properties["app"]
             doc_url = app.documentation_url
             # deal with nuke's inability to handle unicode. #fail
-            if doc_url.__class__ == unicode:
+            if doc_url.__class__ == str:
                 doc_url = unicodedata.normalize('NFKD',
                                                 doc_url).encode('ascii',
                                                                 'ignore')
