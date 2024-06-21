@@ -129,12 +129,12 @@ class SynthEyesEngine(Engine):
         if not (self._port and self._pin):
             raise sgtk.TankError("SynthEyes port:%d and pin:%s are not valid.", self._port, self._pin)
         
-        self.hlev: SyPy3.sylevel.SyLevel = SyPy3.SyLevel()
+        self._hlev: SyPy3.sylevel.SyLevel = SyPy3.SyLevel()
         if not strtobool(getattr(builtins, "DEBUG", None)):
-            if not self.hlev.OpenExisting(self._port, self._pin):
+            if not self._hlev.OpenExisting(self._port, self._pin):
                 raise sgtk.TankError("Could not open existing instance of SynthEyes with port:%s and pin:%s.", self._port, self._pin)
 
-            syntheyes_ver = self.hlev.Version()
+            syntheyes_ver = self._hlev.Version()
             if syntheyes_ver in {
                 "2023.10.1057",
             }:
@@ -199,17 +199,19 @@ class SynthEyesEngine(Engine):
             raise sgtk.TankError(msg)
 
         # Create UI panel for toolkit
-        from tk_syntheyes.ui.sgtk_panel import Ui_SgtkPanel
-        self.ui = Ui_SgtkPanel(self._get_dialog_parent())
-
+        #from tk_syntheyes.ui.sgtk_panel import Ui_SgtkPanel
+        #self.ui = Ui_SgtkPanel(self._get_dialog_parent())
+        from tk_syntheyes.ui.main_window import MainWindow
+        self.ui = MainWindow(self, self._get_dialog_parent())
+        
     def post_app_init(self):
         """
         Called when all apps have been initialized
         """
         import tk_syntheyes
         self._initialize_dark_look_and_feel()
-        self._panel_generator = tk_syntheyes.PanelGenerator(self)
-        self._panel_generator.populate_panel()
+        #self._panel_generator = tk_syntheyes.PanelGenerator(self)
+        #self._panel_generator.populate_panel()
         self.ui.show()
         self.init_heartbeat()
 
@@ -233,7 +235,7 @@ class SynthEyesEngine(Engine):
 
         self._panel_generator.destroy_panel()
 
-        self.hlev.Close()
+        self._hlev.Close()
         
         # Clean up SynthEyes env variables.
         del_vars = [
@@ -471,8 +473,8 @@ class SynthEyesEngine(Engine):
         """Return if SynthEyes' UI currently exists."""
         return True
     
-    ############################################################################
-    # logging
+    ############################################################################    
+    ### Logging ###
 
     def _init_logging(self):
         if self.get_setting("debug_logging", False):
@@ -494,3 +496,9 @@ class SynthEyesEngine(Engine):
 
     def log_exception(self, msg, *args, **kwargs):
         self.logger.exception(msg, *args, **kwargs)
+
+    ############################################################################
+    ### Functions ###
+
+    def exit(self):
+        self._hlev.CloseSynthEyes()
