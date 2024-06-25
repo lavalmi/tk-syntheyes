@@ -106,8 +106,8 @@ def start_toolkit():
             del os.environ[var]
 
 
-import threading
-input("...")
+#import threading
+#input("...")
 
 # Fire up Toolkit and the environment engine
 start_toolkit()

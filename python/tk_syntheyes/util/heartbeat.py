@@ -37,6 +37,10 @@ class Heartbeat(object):
     def stop(self):
         self._stop = True
 
+    def join(self, stop: bool=False):
+        if stop: self.stop()
+        self._thread.join()
+
     def heartbeat_thread_run(self):
         self._running = True
         self._logger.info("Heartbeat: Started")

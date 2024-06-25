@@ -197,18 +197,18 @@ class SynthEyesEngine(Engine):
             msg = "Could not create logging console"
             self.logger.exception(msg)
             raise sgtk.TankError(msg)
-
-        # Create UI panel for toolkit
-        #from tk_syntheyes.ui.sgtk_panel import Ui_SgtkPanel
-        #self.ui = Ui_SgtkPanel(self._get_dialog_parent())
-        from tk_syntheyes.ui.main_window import MainWindow
-        self.ui = MainWindow(self, self._get_dialog_parent())
         
     def post_app_init(self):
         """
         Called when all apps have been initialized
         """
-        import tk_syntheyes
+        # Create UI panel for toolkit
+        #import tk_syntheyes
+        #from tk_syntheyes.ui.sgtk_panel import Ui_SgtkPanel
+        #self.ui = Ui_SgtkPanel(self._get_dialog_parent())
+        from tk_syntheyes.ui.main_window import MainWindow
+        self.ui = MainWindow(self, self._get_dialog_parent())
+        
         self._initialize_dark_look_and_feel()
         #self._panel_generator = tk_syntheyes.PanelGenerator(self)
         #self._panel_generator.populate_panel()
@@ -221,7 +221,7 @@ class SynthEyesEngine(Engine):
         """
         try:
             from tk_syntheyes.util.heartbeat import Heartbeat
-            self.heartbeat = Heartbeat(self, self.logger)
+            self._heartbeat = Heartbeat(self, self.logger)
         except Exception as e:
             msg = ("Shotgun Pipeline Toolkit failed to initialize SynthEyes heartbeat: %s" % e)
             self.logger.exception(msg)
@@ -502,3 +502,4 @@ class SynthEyesEngine(Engine):
 
     def exit(self):
         self._hlev.CloseSynthEyes()
+        self._heartbeat.join(True)
