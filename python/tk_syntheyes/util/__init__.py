@@ -13,12 +13,6 @@ import os
 import sys
 import logging
 
-import SyPy3
-
-# Constants
-SGTK_SYNTHEYES_PORT = 'SGTK_SYNTHEYES_PORT'
-SGTK_SYNTHEYES_PIN = 'SGTK_SYNTHEYES_PIN'
-
 # setup logging
 ################################################################################
 logger = logging.getLogger('sgtk.syntheyes')
@@ -41,11 +35,3 @@ def logging_excepthook(type, value, tb):
     logger.exception("Uncaught exception", exc_info=(type, value, tb))
     sys.__excepthook__(type, value, tb)
 sys.execpthook = logging_excepthook
-
-
-def get_existing_connection():
-    port = int(os.environ[SGTK_SYNTHEYES_PORT])
-    pin = os.environ[SGTK_SYNTHEYES_PIN]
-    hlev = SyPy3.SyLevel()
-    hlev.OpenExisting(port, pin)
-    return hlev

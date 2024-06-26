@@ -9,14 +9,12 @@
 # reserved by Sebastian Kral.
 
 # log console
-import html
 import logging
 
 from .util import callback_event
 
 from sgtk.platform.qt import QtGui
 from sgtk.platform.qt import QtCore
-from builtins import str
 
 COLOR_MAP = {
     'CRITICAL': 'indianred',
@@ -70,6 +68,7 @@ class LogConsole(QtGui.QWidget):
         self.settings = QtCore.QSettings("Shotgun Software",
                                          "tk-syntheyes.log_console")
         self.resize(self.settings.value("size", QtCore.QSize(800, 400)))
+
 
     def closeEvent(self, event):
         self.settings.setValue("size", self.size())

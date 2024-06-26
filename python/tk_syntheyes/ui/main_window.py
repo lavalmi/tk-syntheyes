@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'mainQkrCVE.ui'
+## Form generated from reading UI file 'mainrOKrvr.ui'
 ##
 ## Created by: Qt User Interface Compiler version 5.15.2
 ##
@@ -23,6 +23,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
         MainWindow.setSizePolicy(sizePolicy)
+        MainWindow.setMinimumSize(QSize(0, 90))
         MainWindow.setWindowTitle(u"SynthEyes ShotGrid")
         MainWindow.setLocale(QLocale(QLocale.English, QLocale.Germany))
         self.actionExit_SynthEyes = QAction(MainWindow)
@@ -31,6 +32,8 @@ class Ui_MainWindow(object):
         self.actionAlways_On_Top.setObjectName(u"actionAlways_On_Top")
         self.actionAlways_On_Top.setCheckable(True)
         self.actionAlways_On_Top.setChecked(True)
+        self.actionOpen_Console = QAction(MainWindow)
+        self.actionOpen_Console.setObjectName(u"actionOpen_Console")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.vertical_layout = QVBoxLayout(self.centralwidget)
@@ -80,18 +83,38 @@ class Ui_MainWindow(object):
         self.split_layout = QHSplitLayout()
         self.split_layout.setSpacing(0)
         self.split_layout.setObjectName(u"split_layout")
-        self.split_layout.setContentsMargins(9, 9, 9, -1)
-        self.pnl_left = QGridLayout()
-        self.pnl_left.setSpacing(0)
+        self.split_layout.setContentsMargins(9, 9, 9, 0)
+        self.sca_left = QScrollArea(self.centralwidget)
+        self.sca_left.setObjectName(u"sca_left")
+        sizePolicy2.setHeightForWidth(self.sca_left.sizePolicy().hasHeightForWidth())
+        self.sca_left.setSizePolicy(sizePolicy2)
+        self.sca_left.setFrameShape(QFrame.NoFrame)
+        self.sca_left.setWidgetResizable(True)
+        self.pnl_left = QWidget()
         self.pnl_left.setObjectName(u"pnl_left")
+        self.layout_left = QVBoxLayout(self.pnl_left)
+        self.layout_left.setSpacing(0)
+        self.layout_left.setObjectName(u"layout_left")
+        self.layout_left.setContentsMargins(0, 0, 0, 0)
+        self.sca_left.setWidget(self.pnl_left)
 
-        self.split_layout.addLayout(self.pnl_left)
+        self.split_layout.addWidget(self.sca_left)
 
-        self.pnl_right = QGridLayout()
-        self.pnl_right.setSpacing(0)
+        self.sca_right = QScrollArea(self.centralwidget)
+        self.sca_right.setObjectName(u"sca_right")
+        sizePolicy2.setHeightForWidth(self.sca_right.sizePolicy().hasHeightForWidth())
+        self.sca_right.setSizePolicy(sizePolicy2)
+        self.sca_right.setFrameShape(QFrame.NoFrame)
+        self.sca_right.setWidgetResizable(True)
+        self.pnl_right = QWidget()
         self.pnl_right.setObjectName(u"pnl_right")
+        self.layout_right = QVBoxLayout(self.pnl_right)
+        self.layout_right.setSpacing(0)
+        self.layout_right.setObjectName(u"layout_right")
+        self.layout_right.setContentsMargins(0, 0, 0, 0)
+        self.sca_right.setWidget(self.pnl_right)
 
-        self.split_layout.addLayout(self.pnl_right)
+        self.split_layout.addWidget(self.sca_right)
 
         self.split_layout.setStretch(0, 1000)
 
@@ -114,6 +137,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusBar)
 
         self.menubar.addAction(self.menuFile.menuAction())
+        self.menuFile.addAction(self.actionOpen_Console)
         self.menuFile.addAction(self.actionExit_SynthEyes)
 
         self.retranslateUi(MainWindow)
@@ -124,6 +148,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         self.actionExit_SynthEyes.setText(QCoreApplication.translate("MainWindow", u"Exit SynthEyes", None))
         self.actionAlways_On_Top.setText(QCoreApplication.translate("MainWindow", u"Always On Top", None))
+        self.actionOpen_Console.setText(QCoreApplication.translate("MainWindow", u"Open Console", None))
         self.btn_quick_select.setText("")
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         pass
@@ -164,18 +189,12 @@ import sys
 
 if __name__ == "__main__":
     sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-    from app_command import AppCommand
-else:
-    from .app_command import AppCommand
 
+sys.path.append(os.path.join(os.path.dirname(__file__)))
+from app_command import AppCommand
+from base_panel import BasePanel, SynthEyesPanel
 from engine import SynthEyesEngine
 
-if __name__ == "__main__":
-    from base_panel import BasePanel
-    from base_panel import SynthEyesPanel
-else:
-    from .base_panel import BasePanel
-    from .base_panel import SynthEyesPanel
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, engine: SynthEyesEngine=None, parent=None):
@@ -195,14 +214,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._active_panel_depth = 0
 
         ### Initialize panels ###
-        if __name__ == "__main__":
-            from main_panel import MainPanel
-        else:
-            from .main_panel import MainPanel
-            
-        self._main_panel: MainPanel = self._init_panel(MainPanel, "Main", None, True, True, True)
+        #from main_panel import MainPanel
+        #self._main_panel: BasePanel = self._init_panel(BasePanel, "Main", None, True, True, True)
+        self._main_panel: BasePanel = self._init_panel(BasePanel, "Main", None, True, True, True)
+        # Create context menu button
         self._context_panel: BasePanel = self._init_panel(BasePanel, "Context", self._main_panel, False, False, True)
-        self._link_panel(self._main_panel.btn_context, self._main_panel, self._context_panel)
+        self._main_panel.btn_context = self._main_panel.insert_menu_button(self._context_panel)
+        self._link_panel(self._main_panel.btn_context, self._context_panel)
+        self._main_panel.insert_line()
         
         if self._engine:
             import sgtk
@@ -218,7 +237,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.btn_quick_select.setText(self._main_panel.name)
 
         # Set start panel
-        self.pnl_left.addWidget(self._main_panel, 0, 0, 1, 1)
+        self.pnl_left.layout().addWidget(self._main_panel)        
         
         # Disable standby panels just in case
         self.pnl_right.setEnabled = False
@@ -232,6 +251,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Setup menu actions
         self.actionExit_SynthEyes.triggered.connect(self.exit)
+        self.actionOpen_Console.triggered.connect(self.open_logging_console)
 
     
     def _init_panel(self, panel_type: type, name: str, parent_panel: QWidget, visible=False, enabled=False, add_to_quick_select=True):
@@ -247,7 +267,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         panel.setEnabled(enabled)
         panel.name = name
         panel.sub_panels = {}
-        panel.panel_depth = getattr(parent_panel, "panel_depth", 0) if parent_panel else 0
+        panel.panel_depth = getattr(parent_panel, "panel_depth", 0) + 1 if parent_panel else 0
 
         # Add quick select button
         if add_to_quick_select:
@@ -259,8 +279,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if parent_panel:
             parent_panel.sub_panels[name] = panel
             if panel_type is SynthEyesPanel or issubclass(panel_type, SynthEyesPanel):
-                panel.make_sub_panel()
-                self._link_panel(panel.btn_back, panel, parent_panel)
+                self._link_panel(panel.make_sub_panel(parent_panel), parent_panel)
 
         return panel
 
@@ -310,11 +329,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Add line after favourites
         if fav_pos > 2:
-            line = QFrame(self)
-            line.setObjectName(u"ln_favorites")
-            line.setFrameShape(QFrame.HLine)
-            line.setFrameShadow(QFrame.Sunken)
-            self._main_panel.insert_widget(line, -1, 0, 1, 3)
+            self._main_panel.insert_line()
 
         # Now add all apps to main menu
         for app_name in sorted(cmds_by_app.keys()):
@@ -353,22 +368,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 panel = sub_panel
             else:
                 # create new sub menu
-                sub_panel = self._init_panel(BasePanel, item_label, panel, False, False, False) #TODO Consider whether the sub panels should be added to the quick select or not
-                
+                sub_panel: BasePanel = self._init_panel(BasePanel, item_label, panel, False, False, False) #TODO Consider whether the sub panels should be added to the quick select or not
+                self._link_panel(panel.insert_menu_button(sub_panel), sub_panel)
+                self._link_panel(sub_panel.make_sub_panel(panel), panel)
                 panel = sub_panel
 
         # Finally create the command button
-        layout: QGridLayout = panel.layout()
-        if row < 0:
-            row = layout.rowCount() - 1
-        btn = QPushButton(text=parts[-1], parent=panel)
-        btn.clicked.connect(command.callback)
-        panel.insert_widget(btn, row, 1, 1, 1)
-        
-        return btn
+        return panel.insert_button(None, parts[-1], -1, command.callback)
     
 
-    def _link_panel(self, button, panel_from, panel_to):
+    def _link_panel(self, button, panel_to):
         # Connect panels via button actions
         button.clicked.connect(lambda: self._switch_panel(panel_to))
 
@@ -393,37 +402,35 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self._switch_quick_select()
 
         # Identify direction of the animation based on current and targeted panel depth
-        left_to_right = getattr(target_panel, "panel_depth", True) >= self._active_panel_depth
+        left_to_right = getattr(target_panel, "panel_depth", 0) >= self._active_panel_depth
 
         # Change panel name 
         self.btn_quick_select.setText(target_panel.name)
 
         self._active_panel_depth += 1 if left_to_right else -1
         if self._left_panel_active and not left_to_right:
-            self.pnl_right.addWidget(self.pnl_left.takeAt(0).widget())
+            self.pnl_right.layout().addWidget(self.pnl_left.takeAt(0).widget())
             self.split_layout.split_factor = 0
         elif not self._left_panel_active and left_to_right:
-            self.pnl_left.addWidget(self.pnl_right.takeAt(0).widget())
+            self.pnl_left.layout().addWidget(self.pnl_right.takeAt(0).widget())
             self.split_layout.split_factor = 1
 
         # Switch panels if direction is reversed
         if left_to_right:
-            panel_from = self.pnl_left
             panel_to = self.pnl_right
             end_value = 0
         else:
-            panel_from = self.pnl_right
             panel_to = self.pnl_left
             end_value = 1
 
         # Add target panel and make it visible
         target_panel.setVisible(True)
         target_panel.setEnabled(True)
-        panel_to.addWidget(target_panel, 0, 0, 1, 1)
+        panel_to.layout().addWidget(target_panel)
         
         split: QHSplitLayout = self.split_layout
         split_factor = split.split_factor
-        duration = 500 * (1 - split_factor if split_factor < end_value else split_factor)
+        duration = 200 * (1 - split_factor if split_factor < end_value else split_factor)
 
         self._left_panel_active = not left_to_right
 
@@ -433,18 +440,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         easing_curve = QEasingCurve(easing_curve_type)
         easing_curve.setAmplitude(amplitude)
         self._anim_panel_transition.setEasingCurve(easing_curve)
+
+        self.sca_left.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.sca_right.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._anim_panel_transition.start()
 
    
     def _switch_panel_finished(self):
         panel = self.pnl_right if self._left_panel_active else self.pnl_left
-        item = panel.takeAt(0)
+        item = panel.layout().takeAt(0)
         if item:
             widget = item.widget()
             if widget:
                 widget.setParent(self.centralWidget())
                 widget.setVisible(False)
                 widget.setEnabled(False)
+        self.sca_left.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.sca_right.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.setEnabled(True)
 
    
@@ -456,7 +468,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # If panel is not fully opened/closed shrink duration respectively
         split_factor = self.panel_split_layout.split_factor
-        duration = 500 * (1 - split_factor if split_factor < quick_select else split_factor)
+        duration = 300 * (1 - split_factor if split_factor < quick_select else split_factor)
 
         self._anim_panel_quick_select_transition.setEndValue(quick_select)
         self._anim_panel_quick_select_transition.setDuration(duration)
@@ -467,6 +479,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.sca_quick_select.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
   
+    def open_logging_console(self):
+        app = QCoreApplication.instance()
+        win = app.property('tk-syntheyes.log_console')
+        win.setHidden(False)
+        win.activateWindow()
+        win.raise_()
+
+
     def exit(self):
         if self._engine:
             self._engine.exit()

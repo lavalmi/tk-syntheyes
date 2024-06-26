@@ -12,12 +12,8 @@ import logging
 import os
 import threading
 import time
-import sys
-
-from . import get_existing_connection
 
 import builtins
-import SyPy3
 
 class Heartbeat(object):
 

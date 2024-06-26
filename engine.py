@@ -165,8 +165,6 @@ class SynthEyesEngine(Engine):
         # to display correctly in all of the app windows
         from sgtk.platform.qt import QtCore, QtGui
 
-        from tk_syntheyes import logging_console
-
         # tell QT to interpret C strings as utf-8
         utf8 = QtCore.QTextCodec.codecForName("utf-8")
         QtCore.QTextCodec.setCodecForCStrings(utf8)
@@ -187,6 +185,8 @@ class SynthEyesEngine(Engine):
             raise sgtk.TankError(msg)
 
         # Create SynthEyes logging console
+        #TODO Consider potentially moving the logging console to the Main window instead of keeping it in the engine
+        from tk_syntheyes import logging_console
         try:
             self.qt_log = logging_console.LogConsole()
             self.qt_app.setProperty("tk-syntheyes.log_console", self.qt_log)
