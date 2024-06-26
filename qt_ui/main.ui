@@ -62,7 +62,7 @@
      </widget>
     </item>
     <item>
-     <layout class="QVBoxLayout" name="panel_split_layout" stretch="0,1000">
+     <layout class="QVBoxLayout" name="main_split_layout" stretch="0,1000">
       <property name="spacing">
        <number>0</number>
       </property>
@@ -132,7 +132,7 @@
        </widget>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="split_layout" stretch="1000,0">
+       <layout class="QHBoxLayout" name="panel_split_layout" stretch="1000,0">
         <property name="spacing">
          <number>0</number>
         </property>
@@ -163,6 +163,14 @@
            <bool>true</bool>
           </property>
           <widget class="QWidget" name="pnl_left">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>207</width>
+             <height>341</height>
+            </rect>
+           </property>
            <layout class="QVBoxLayout" name="layout_left">
             <property name="spacing">
              <number>0</number>
@@ -198,6 +206,14 @@
            <bool>true</bool>
           </property>
           <widget class="QWidget" name="pnl_right">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>16</width>
+             <height>324</height>
+            </rect>
+           </property>
            <layout class="QVBoxLayout" name="layout_right">
             <property name="spacing">
              <number>0</number>

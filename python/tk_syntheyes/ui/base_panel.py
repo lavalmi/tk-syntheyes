@@ -1,69 +1,14 @@
-# -*- coding: utf-8 -*-
-
-################################################################################
-## Form generated from reading UI file 'base_paneliJeFCG.ui'
-##
-## Created by: Qt User Interface Compiler version 5.15.2
-##
-## WARNING! All changes made in this file will be lost when recompiling UI file!
-################################################################################
+from ui_base_panel import Ui_BasePanel
 
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
+class BasePanel(QWidget, Ui_BasePanel):
+    def __init__(self, parent=None):
+        super(BasePanel, self).__init__(parent)
+        self.setupUi(self)
 
-class Ui_BasePanel(object):
-    def setupUi(self, BasePanel):
-        if not BasePanel.objectName():
-            BasePanel.setObjectName(u"BasePanel")
-        BasePanel.resize(203, 272)
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(BasePanel.sizePolicy().hasHeightForWidth())
-        BasePanel.setSizePolicy(sizePolicy)
-        self.gridLayout = QGridLayout(BasePanel)
-        self.gridLayout.setObjectName(u"gridLayout")
-        self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.spc_right = QLabel(BasePanel)
-        self.spc_right.setObjectName(u"spc_right")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.spc_right.sizePolicy().hasHeightForWidth())
-        self.spc_right.setSizePolicy(sizePolicy1)
-        self.spc_right.setMaximumSize(QSize(16, 16))
-
-        self.gridLayout.addWidget(self.spc_right, 0, 2, 1, 1)
-
-        self.spc_left = QLabel(BasePanel)
-        self.spc_left.setObjectName(u"spc_left")
-        sizePolicy1.setHeightForWidth(self.spc_left.sizePolicy().hasHeightForWidth())
-        self.spc_left.setSizePolicy(sizePolicy1)
-        self.spc_left.setMaximumSize(QSize(16, 16))
-
-        self.gridLayout.addWidget(self.spc_left, 0, 0, 1, 1)
-
-        self.spc_center = QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
-
-        self.gridLayout.addItem(self.spc_center, 0, 1, 1, 1)
-
-
-        self.retranslateUi(BasePanel)
-
-        QMetaObject.connectSlotsByName(BasePanel)
-    # setupUi
-
-    def retranslateUi(self, BasePanel):
-        BasePanel.setWindowTitle(QCoreApplication.translate("BasePanel", u"Form", None))
-        self.spc_right.setText("")
-        self.spc_left.setText("")
-    # retranslateUi
-
-################################################################################
-
-class SynthEyesPanel(object):
     def make_sub_panel(self, panel):
         btn = self.insert_menu_button(panel, is_back_button=True)
         self.insert_line()
@@ -124,9 +69,3 @@ class SynthEyesPanel(object):
         self.gridLayout.addWidget(self.spc_left, row, 0, 1, 1)
         self.gridLayout.addItem(self.spc_center, row, 1, 1, 1)
         self.gridLayout.addWidget(self.spc_right, row, 2, 1, 1)
-
-
-class BasePanel(QWidget, Ui_BasePanel, SynthEyesPanel):
-    def __init__(self, parent=None):
-        super(BasePanel, self).__init__(parent)
-        self.setupUi(self)
