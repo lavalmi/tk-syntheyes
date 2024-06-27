@@ -246,14 +246,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     
     def _switch_panel(self, target_panel: QWidget, easing_curve_type:QEasingCurve.Type=QEasingCurve.OutBounce, amplitude:float=0.25):
-        self._anim_panel_transition.stop()
-        
-        # Disable panel during animation
-        self.setEnabled(False)
-
         if self.btn_quick_select.isChecked():
             self.btn_quick_select.setChecked(False)
             self._switch_quick_select()
+        
+        # Check if the target panel is already active anyways
+        active_layout: QLayout = self.pnl_left.layout() if self._left_panel_active else self.pnl_right.layout()
+        active_panel = active_layout.itemAt(0).widget()
+        if target_panel == active_panel:
+            return
+        
+        # Disable panel during animation
+        self.setEnabled(False)
+        self._anim_panel_transition.stop()
 
         # Identify direction of the animation based on current and targeted panel depth
         left_to_right = getattr(target_panel, "panel_depth", 0) >= self._active_panel_depth
