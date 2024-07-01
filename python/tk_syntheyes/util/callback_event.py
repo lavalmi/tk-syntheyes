@@ -16,7 +16,7 @@ and so it cannot use logging itself
 """
 
 import logging
-from PySide import QtCore
+from sgtk.platform.qt import QtCore
 
 
 class RunCallbackEvent(QtCore.QEvent):
