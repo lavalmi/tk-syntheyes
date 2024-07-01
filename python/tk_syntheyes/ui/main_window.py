@@ -109,6 +109,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
     def _init_panel(self, panel_type: type, name: str, parent_panel: QWidget, visible=False, enabled=False, add_to_quick_select=True):
+        """Initiate a new panel and optionally automatically link it to the quick select by inserting a corresponding button."""
         if parent_panel:
             if not hasattr(parent_panel, "sub_panels"):
                 parent_panel.sub_panels = {}
@@ -139,6 +140,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
     def _init_commands(self):
+        """Iterate over all commands retrieved from the engine and generate menu panels to reflect their respective hierarchy. Buttons are automatically created and linked to either the command or a subpanel."""
         # Enumerate all items and create menu objects for them
         favs = self._engine.get_setting("menu_favourites") if self._engine else {}
         engine_cmds = self._engine.commands.items() if self._engine else {}
@@ -211,6 +213,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
     def _add_command_button(self, command: AppCommand, panel: BasePanel, row=-1):
+        """Add a button to the given panel and linking its clicking action to the corresponding AppCommand retrieved from the engine."""
         # create menu sub-tree if need to:
         # Support menu items separated by '/'
         parts = command.name.split("/")
@@ -232,11 +235,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     
 
     def _link_panel(self, button, panel_to):
+        """Link the given button to a panel. Clicking the button will start the panel switching transition to display the corresponding UI elements."""
         # Connect panels via button actions
         button.clicked.connect(lambda: self._switch_panel(panel_to))
 
     
     def closeEvent(self, event):
+        """Window behaviour on close."""
         if self._minimize_on_close:
             self.setWindowState(Qt.WindowMinimized)
             event.ignore()
@@ -246,6 +251,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     
     def _switch_panel(self, target_panel: QWidget, easing_curve_type:QEasingCurve.Type=QEasingCurve.OutBounce, amplitude:float=0.25):
+        """Initiate switching the currently displayed panel to another by starting an animation."""
         if self.btn_quick_select.isChecked():
             self.btn_quick_select.setChecked(False)
             self._switch_quick_select()
@@ -305,6 +311,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
    
     def _switch_panel_finished(self):
+        """Wrap up the panel transition to ensure the UI can be properly used. This is automatically triggered once the respective animation has finished."""
         panel = self.pnl_right if self._left_panel_active else self.pnl_left
         item = panel.layout().takeAt(0)
         if item:
@@ -319,6 +326,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
    
     def _switch_quick_select(self):
+        """Open the quick select panel by starting an animation."""
         self._anim_panel_quick_select_transition.stop()
         self.sca_quick_select.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
@@ -334,6 +342,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
   
     def _switch_quick_select_finished(self):
+        """Wrap up the quick select panel transition to ensure the UI can be properly used. This is automatically triggered once the respective animation has finished."""
         self.sca_quick_select.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
   
@@ -346,6 +355,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
     def exit(self):
+        """Exits the UI and engine if desired."""
         if self._engine:
             self._engine.exit()
         os._exit(0)

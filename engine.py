@@ -210,8 +210,6 @@ class SynthEyesEngine(Engine):
         self.ui = MainWindow(self, self._get_dialog_parent())
         
         self._initialize_dark_look_and_feel()
-        #self._panel_generator = tk_syntheyes.PanelGenerator(self)
-        #self._panel_generator.populate_panel()
         self.ui.show()
         self.init_heartbeat()
 
@@ -233,8 +231,6 @@ class SynthEyesEngine(Engine):
         """
         self.logger.debug("%s: Destroying...", self)
 
-        self._panel_generator.destroy_panel()
-
         self._hlev.Close()
         
         # Clean up SynthEyes env variables.
@@ -251,7 +247,7 @@ class SynthEyesEngine(Engine):
                 del os.environ[var]
 
         # Remove SynthEyes' directory from PYTHONPATH
-        if sys.platform.is_windows():
+        if sys.platform.startswith("win32"):
             env_var_sep = ";"
         else:
             env_var_sep = ":"

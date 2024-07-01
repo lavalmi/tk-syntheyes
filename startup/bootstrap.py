@@ -100,6 +100,7 @@ def start_toolkit():
         "SGTK_CONTEXT",
         "SGTK_FILE_TO_OPEN",
         "SGTK_LOAD_SYNTHEYES_PLUGINS",
+        "SYNTHEYES_PYTHON_PATH"
     ]
     for var in del_vars:
         if var in os.environ:

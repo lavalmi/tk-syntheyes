@@ -98,6 +98,10 @@ class SynthEyesLauncher(SoftwareLauncher):
             else:
                 args = " ".join([args, "-start", startup_path])
 
+        # Set the syntheyes python path to point to the shotgun python executable to ensure package compatibility. Ignore this If the path is already present to allow overwriting the default path if necessary.
+        if not os.environ.get("SYNTHEYES_PYTHON_PATH"):
+            os.environ["SYNTHEYES_PYTHON_PATH"] = "C:\\Program Files\\Shotgun\\Python3\\python.exe"
+
         # Check the engine settings to see whether any plugins have been
         # specified to load.
         
