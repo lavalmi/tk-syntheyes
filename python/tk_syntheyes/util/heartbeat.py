@@ -19,7 +19,8 @@ class Heartbeat(object):
 
     def __init__(self, engine, logger):
         self._logger: logging.Logger = logger
-        self._engine = engine
+        from engine import SynthEyesEngine
+        self._engine: SynthEyesEngine = engine
         self._stop = False
         self._running = False
 
@@ -35,7 +36,8 @@ class Heartbeat(object):
 
     def join(self, stop: bool=False):
         if stop: self.stop()
-        self._thread.join()
+        if self._thread is not threading.current_thread():
+            self._thread.join()
 
     def heartbeat_thread_run(self):
         self._running = True
@@ -52,7 +54,8 @@ class Heartbeat(object):
                 if error_cycle >= self.tolerance:
                     msg = "Python: Quitting. Heartbeat errors greater than tolerance."
                     self._logger.error(msg)
-                    os._exit(0)
+                    self._stop = True
             else: error_cycle = 0
 
+        self._engine.ui.exit()
         self._running = False

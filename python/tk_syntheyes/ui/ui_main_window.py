@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'mainiDJxXx.ui'
+## Form generated from reading UI file 'maineqYTLS.ui'
 ##
 ## Created by: Qt User Interface Compiler version 5.15.2
 ##
@@ -28,12 +28,16 @@ class Ui_MainWindow(object):
         MainWindow.setLocale(QLocale(QLocale.English, QLocale.Germany))
         self.actionExit_SynthEyes = QAction(MainWindow)
         self.actionExit_SynthEyes.setObjectName(u"actionExit_SynthEyes")
-        self.actionAlways_On_Top = QAction(MainWindow)
-        self.actionAlways_On_Top.setObjectName(u"actionAlways_On_Top")
-        self.actionAlways_On_Top.setCheckable(True)
-        self.actionAlways_On_Top.setChecked(True)
         self.actionOpen_Console = QAction(MainWindow)
         self.actionOpen_Console.setObjectName(u"actionOpen_Console")
+        self.actionAuto_Resize = QAction(MainWindow)
+        self.actionAuto_Resize.setObjectName(u"actionAuto_Resize")
+        self.actionAuto_Resize.setCheckable(True)
+        self.actionAuto_Resize.setChecked(True)
+        self.actionStays_On_Top = QAction(MainWindow)
+        self.actionStays_On_Top.setObjectName(u"actionStays_On_Top")
+        self.actionStays_On_Top.setCheckable(True)
+        self.actionStays_On_Top.setChecked(True)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.vertical_layout = QVBoxLayout(self.centralwidget)
@@ -132,6 +136,8 @@ class Ui_MainWindow(object):
         self.menubar.setGeometry(QRect(0, 0, 227, 21))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
+        self.menuSettings = QMenu(self.menubar)
+        self.menuSettings.setObjectName(u"menuSettings")
         MainWindow.setMenuBar(self.menubar)
         self.statusBar = QStatusBar(MainWindow)
         self.statusBar.setObjectName(u"statusBar")
@@ -139,8 +145,11 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusBar)
 
         self.menubar.addAction(self.menuFile.menuAction())
+        self.menubar.addAction(self.menuSettings.menuAction())
         self.menuFile.addAction(self.actionOpen_Console)
         self.menuFile.addAction(self.actionExit_SynthEyes)
+        self.menuSettings.addAction(self.actionAuto_Resize)
+        self.menuSettings.addAction(self.actionStays_On_Top)
 
         self.retranslateUi(MainWindow)
 
@@ -149,10 +158,12 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         self.actionExit_SynthEyes.setText(QCoreApplication.translate("MainWindow", u"Exit SynthEyes", None))
-        self.actionAlways_On_Top.setText(QCoreApplication.translate("MainWindow", u"Always On Top", None))
         self.actionOpen_Console.setText(QCoreApplication.translate("MainWindow", u"Open Console", None))
+        self.actionAuto_Resize.setText(QCoreApplication.translate("MainWindow", u"Auto Resize", None))
+        self.actionStays_On_Top.setText(QCoreApplication.translate("MainWindow", u"Stays On Top", None))
         self.btn_quick_select.setText("")
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
+        self.menuSettings.setTitle(QCoreApplication.translate("MainWindow", u"Settings", None))
         pass
     # retranslateUi
 

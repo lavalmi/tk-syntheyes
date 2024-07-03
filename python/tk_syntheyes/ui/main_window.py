@@ -14,6 +14,8 @@ from base_panel import BasePanel
 from tk_syntheyes.app_command import AppCommand
 from engine import SynthEyesEngine
 
+from configparser import SafeConfigParser
+
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, engine: SynthEyesEngine=None, parent=None):
@@ -21,45 +23,26 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
 
         self._engine = engine
+        
+        self._auto_resize = self.actionAuto_Resize.isChecked
+        self._stays_on_top = self.actionStays_On_Top.isChecked
+        self._config = SafeConfigParser()
+        self._load_config()
 
         # Setup button hints
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.setWindowFlag(Qt.WindowMinimizeButtonHint, False)
         self.setWindowFlag(Qt.WindowMaximizeButtonHint, False)
-        self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
                 
-        self._minimize_on_close = True
         self._left_panel_active = True
-        self._active_panel_depth = 0
-
-        ### Initialize panels ###
-        #from main_panel import MainPanel
-        #self._main_panel: BasePanel = self._init_panel(BasePanel, "Main", None, True, True, True)
-        self._main_panel: BasePanel = self._init_panel(BasePanel, "Main", None, True, True, True)
-        # Create context menu button
-        self._context_panel: BasePanel = self._init_panel(BasePanel, "Context", self._main_panel, False, False, True)
-        self._main_panel.btn_context = self._main_panel.insert_menu_button(self._context_panel)
-        self._link_panel(self._main_panel.btn_context, self._context_panel)
-        self._main_panel.insert_line()
+        self._panels = []        
+        self._minimize_on_close = True
         
-        if self._engine:
-            import sgtk
-            context: sgtk.Context = self._engine.context
-            self._main_panel.btn_context.setText("{}, {}".format(context.project["name"], context.step))
-        #########################
-
-        # Initialize all available app commands
-        self._init_commands()
+        # Generate panels
+        self.generate_panels()
 
         # Initialize quick select
         self.btn_quick_select.clicked.connect(lambda: self._switch_quick_select())
-        self.btn_quick_select.setText(self._main_panel.name)
-
-        # Set start panel
-        self.pnl_left.layout().addWidget(self._main_panel)        
-        
-        # Disable standby panels just in case
-        self.pnl_right.setEnabled = False
 
         ### Setup animations ###
         self._anim_panel_transition = QPropertyAnimation(self, b"panel_split_factor", self)
@@ -68,11 +51,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._anim_panel_quick_select_transition = QPropertyAnimation(self, b"main_split_factor", self)
         self._anim_panel_quick_select_transition.setEasingCurve(QEasingCurve.OutExpo)
         self._anim_panel_quick_select_transition.finished.connect(self._switch_quick_select_finished)
+
+        self._anim_window_geom = QPropertyAnimation(self, b"size", self)
+        self._anim_window_geom.setEasingCurve(QEasingCurve.OutExpo)
         ########################
 
         # Setup menu actions
         self.actionExit_SynthEyes.triggered.connect(self.exit)
         self.actionOpen_Console.triggered.connect(self.open_logging_console)
+        self.actionAuto_Resize.triggered.connect(self._update_auto_resize)
+        self.actionStays_On_Top.triggered.connect(self._update_stays_on_top)
 
     
     def get_layout_stretch_steps(self, layout: QBoxLayout):
@@ -92,6 +80,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         layout.setStretch(0, round(factor * stretch_steps))
         layout.setStretch(1, round((1 - factor) * stretch_steps))
     
+    ### Properties ###
     def set_main_panel_split_factor(self, factor: float):
         self.set_split_factor(self.main_split_layout, factor)
 
@@ -106,6 +95,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     main_split_factor = Property(float, get_main_panel_split_factor, set_main_panel_split_factor)
     panel_split_factor = Property(float, get_split_panel_split_factor, set_split_panel_split_factor)
+    ##################
 
 
     def _init_panel(self, panel_type: type, name: str, parent_panel: QWidget, visible=False, enabled=False, add_to_quick_select=True):
@@ -123,6 +113,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         panel.name = name
         panel.sub_panels = {}
         panel.panel_depth = getattr(parent_panel, "panel_depth", 0) + 1 if parent_panel else 0
+        self._panels.append(panel)
 
         # Add quick select button
         if add_to_quick_select:
@@ -239,7 +230,64 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Connect panels via button actions
         button.clicked.connect(lambda: self._switch_panel(panel_to))
 
-    
+
+    def regenerate_panels(self):
+        # Clear current UI elements based on the old context
+        layout = self.sca_quick_select_contents.layout()
+        while layout.count() > 1:
+            item: QLayoutItem = layout.takeAt(0)
+            if item: 
+                widget = item.widget()
+                if widget: 
+                    widget.deleteLater()
+
+        for panel in self._panels:
+            panel.deleteLater()
+        self._panels.clear()
+                
+        # Generate the UI again with the new context
+        self.generate_panels()
+        
+
+    def generate_panels(self):
+        ### Initialize panels ###
+        self._main_panel: BasePanel = self._init_panel(BasePanel, "Main", None, True, True, True)
+        # Create context menu
+        context_name = "Context"
+        if self._engine:
+            import sgtk
+            context: sgtk.Context = self._engine.context
+            #context_name: str = "{}, {}".format(context.project["name"], context.step["name"])
+            context_name: str = str(context)
+
+        self._context_panel: BasePanel = self._init_panel(BasePanel, context_name, self._main_panel, False, False, True)
+        self._main_panel.btn_context = self._main_panel.insert_menu_button(self._context_panel)
+        self._main_panel.btn_context.setText(context_name)
+        self._link_panel(self._main_panel.btn_context, self._context_panel)
+        self._main_panel.insert_line()        
+        #########################
+
+        # Initialize all available app commands
+        self._init_commands()
+
+        # Initialize quick select
+        self.btn_quick_select.setText(self._main_panel.name)
+
+        # Set start panel
+        active_panel: QWidget = self.pnl_left if self._left_panel_active else self.pnl_right
+        active_panel.layout().addWidget(self._main_panel)
+        self._active_panel_depth = self._main_panel.panel_depth
+
+        if self._auto_resize():
+            # Process qt events to make sure that the preferred size of the window is updated before accessing the panels preferred size
+            QApplication.processEvents()
+
+            # Match starting panel's preferred size
+            pref_size = self._get_preferred_panel_size(self._main_panel)
+            if pref_size is not None:
+                self.resize(pref_size)
+
+
     def closeEvent(self, event):
         """Window behaviour on close."""
         if self._minimize_on_close:
@@ -307,6 +355,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.sca_left.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.sca_right.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.sca_left.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.sca_right.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)        
+        
+        if self._auto_resize():
+            # Adjust geometry of the window to fix the new panel
+            pref_size = self._get_preferred_panel_size(target_panel)
+            if pref_size is not None:
+                self._anim_window_geom.setDuration(duration)
+                self._anim_window_geom.setEndValue(pref_size)
+                self._anim_window_geom.start()
+
         self._anim_panel_transition.start()
 
    
@@ -322,6 +381,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 widget.setEnabled(False)
         self.sca_left.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.sca_right.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.sca_left.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.sca_right.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.setEnabled(True)
 
    
@@ -329,6 +390,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """Open the quick select panel by starting an animation."""
         self._anim_panel_quick_select_transition.stop()
         self.sca_quick_select.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.sca_left.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.sca_right.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         quick_select = self.btn_quick_select.isChecked()
 
@@ -344,6 +407,36 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def _switch_quick_select_finished(self):
         """Wrap up the quick select panel transition to ensure the UI can be properly used. This is automatically triggered once the respective animation has finished."""
         self.sca_quick_select.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.sca_left.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.sca_right.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
+
+    def _get_preferred_panel_size(self, panel: QWidget):
+        pref_width = getattr(panel, "preferred_width", None)
+        if pref_width is not None:
+            size: QSize = self.sizeHint() + panel.sizeHint()
+            return QSize(size.width() + pref_width, size.height())
+        return None
+
+
+    def _update_auto_resize(self):
+        if self._auto_resize():
+            # Adjust geometry of the window to fix the new panel
+            target_panel = self.pnl_left if self._left_panel_active else self.pnl_right
+            if target_panel:
+                item = target_panel.layout().itemAt(0)
+                if item:
+                    target_panel = item.widget()
+                    pref_size = self._get_preferred_panel_size(target_panel)
+                    if pref_size is not None:
+                        self._anim_window_geom.setDuration(300)
+                        self._anim_window_geom.setEndValue(pref_size)
+                        self._anim_window_geom.start()
+
+
+    def _update_stays_on_top(self):
+        self.setWindowFlag(Qt.WindowStaysOnTopHint, self._stays_on_top())
+        self.show()
 
   
     def open_logging_console(self):
@@ -356,9 +449,76 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def exit(self):
         """Exits the UI and engine if desired."""
+        self._save_config()
         if self._engine:
             self._engine.exit()
         os._exit(0)
+
+### Config #####################################################################
+    
+    def _user_path(self):
+        user_path = {"darwin": "~/Library/Application Support/SynthEyes",
+                    "win32": "%APPDATA%/SynthEyes",
+                    "linux": "~/.SynthEyes"}[sys.platform]
+        return os.path.expandvars(os.path.expanduser(user_path))
+    
+
+    def _config_path(self):
+        return os.path.join(self._user_path(), 'sgtk_tk-syntheyes.ini')
+
+
+    def _save_config(self):
+        # Create directory for config file if it does not exist
+        config_path = self._config_path()
+        config_dir = os.path.dirname(config_path)
+        if not os.path.exists(config_dir):
+            os.makedirs(config_dir)
+
+        ### Save UI state to config ###
+        if not self._config.has_section("UI"): 
+            self._config.add_section("UI")
+        self._config.set("UI", "pos", "{},{}".format(self.x(), self.y()))
+        self._config.set("UI", "size", "{},{}".format(self.width(), self.height()))
+        self._config.set("UI", "auto_resize", str(self._auto_resize()))
+        self._config.set("UI", "stays_on_top", str(self._stays_on_top()))
+        ###############################
+
+        # Save out the updated config
+        with open(config_path, "w") as file_:
+            self._config.write(file_)
+
+
+    def _load_config(self):
+        success = True
+        try:
+            self._config.read(self._config_path())
+        except Exception as e:
+            self._engine.log_info("Could not read tk-syntheyes config: %s", e)
+            success = False
+        
+        ### Setup UI defaults ###
+        # pos
+        pos = self._config.get("UI", "pos", fallback=None)
+        try:
+            pos = pos.split(",")
+            self.move(int(pos[0]), int(pos[1]))
+        except:
+            pass
+        # size
+        size = self._config.get("UI", "size", fallback=None)
+        try:
+            size = size.split(",")
+            self.resize(int(size[0]), int(size[1]))
+        except:
+            pass
+        # auto_resize
+        self.actionAuto_Resize.setChecked(self._config.getboolean("UI", "auto_resize", fallback=self._auto_resize()))
+        # stays_on_top
+        self.actionStays_On_Top.setChecked(self._config.getboolean("UI", "stays_on_top", fallback=self._stays_on_top()))
+        self._update_stays_on_top()
+        ######################
+        
+        return success
 
 ################################################################################
 

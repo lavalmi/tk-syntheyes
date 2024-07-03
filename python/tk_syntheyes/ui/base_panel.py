@@ -9,6 +9,10 @@ class BasePanel(QWidget, Ui_BasePanel):
         super(BasePanel, self).__init__(parent)
         self.setupUi(self)
 
+        self.menu_indicator_size = 16
+        self.max_button_width = 0
+        self.update_preferred_width()
+
     def make_sub_panel(self, panel):
         btn = self.insert_menu_button(panel, is_back_button=True)
         self.insert_line()
@@ -34,6 +38,11 @@ class BasePanel(QWidget, Ui_BasePanel):
         if callback:
             btn.clicked.connect(callback)
         self.insert_widget(btn, row, 1, 1, 1)
+
+        width = btn.sizeHint().width()
+        if width > self.max_button_width:
+            self.max_button_width = width
+            self.update_preferred_width()
         return btn
     
     def insert_menu_button(self, panel, icon:QIcon=None, row=-1, is_back_button=False):
@@ -48,7 +57,7 @@ class BasePanel(QWidget, Ui_BasePanel):
     def insert_menu_indicator(self, right=True, row=-1):
         tlbtn = QToolButton(self)
         tlbtn.setEnabled(False)
-        tlbtn.setMaximumSize(QSize(16, 16))
+        tlbtn.setMaximumSize(QSize(self.menu_indicator_size, self.menu_indicator_size))
         tlbtn.setAutoRaise(True)
         tlbtn.setArrowType(Qt.RightArrow if right else Qt.LeftArrow)
         self.insert_widget(tlbtn, row, 2 if right else 0, 1, 1)
@@ -69,3 +78,6 @@ class BasePanel(QWidget, Ui_BasePanel):
         self.gridLayout.addWidget(self.spc_left, row, 0, 1, 1)
         self.gridLayout.addItem(self.spc_center, row, 1, 1, 1)
         self.gridLayout.addWidget(self.spc_right, row, 2, 1, 1)
+
+    def update_preferred_width(self):
+        self.preferred_width = 2 * (self.menu_indicator_size + self.gridLayout.horizontalSpacing()) + self.max_button_width

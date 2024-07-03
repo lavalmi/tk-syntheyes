@@ -256,7 +256,15 @@
     <addaction name="actionOpen_Console"/>
     <addaction name="actionExit_SynthEyes"/>
    </widget>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>Settings</string>
+    </property>
+    <addaction name="actionAuto_Resize"/>
+    <addaction name="actionStays_On_Top"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuSettings"/>
   </widget>
   <widget class="QStatusBar" name="statusBar">
    <property name="sizeGripEnabled">
@@ -268,7 +276,12 @@
     <string>Exit SynthEyes</string>
    </property>
   </action>
-  <action name="actionAlways_On_Top">
+  <action name="actionOpen_Console">
+   <property name="text">
+    <string>Open Console</string>
+   </property>
+  </action>
+  <action name="actionAuto_Resize">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -276,12 +289,18 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Always On Top</string>
+    <string>Auto Resize</string>
    </property>
   </action>
-  <action name="actionOpen_Console">
+  <action name="actionStays_On_Top">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
    <property name="text">
-    <string>Open Console</string>
+    <string>Stays On Top</string>
    </property>
   </action>
  </widget>

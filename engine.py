@@ -16,6 +16,7 @@ A SynthEyes engine for Shotgun Toolkit.
 import PySide2.QtConcurrent
 import PySide2.QtCore
 import PySide2.QtGui
+import SyPy3.sytalker
 import sgtk
 import sys
 import traceback
@@ -263,6 +264,15 @@ class SynthEyesEngine(Engine):
         # Clear the dictionary of SynthEyes panels to keep the garbage collector happy.
         self._syntheyes_panel_dict = {}
 
+    def change_context(self, new_context):
+        context = self.context
+        super().change_context(new_context)
+        if context == new_context:
+            return
+        
+        # Call update function to reflect the context change in the UI
+        self.ui.regenerate_panels()
+
     def _init_pyside(self):
         """
         Handles the pyside init
@@ -497,5 +507,9 @@ class SynthEyesEngine(Engine):
     ### Functions ###
 
     def exit(self):
-        self._hlev.CloseSynthEyes()
+        self.hlev = SyPy3.SyLevel()
+        if self.hlev.OpenExisting(self._port, self._pin):
+            if self._hlev.core.OK():
+                self._hlev.CloseSynthEyes()
+        
         self._heartbeat.join(True)
