@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 from PySide2.QtCore import *
 from PySide2.QtGui import *
@@ -23,13 +24,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
 
         self._engine = engine
+        self.click_pos = None
+        self._menu_click_time = time.time()
         
         self._auto_resize = self.actionAuto_Resize.isChecked
         self._stays_on_top = self.actionStays_On_Top.isChecked
+        self._borderless = self.actionBorderless.isChecked
         self._config = SafeConfigParser()
         self._load_config()
 
-        # Setup button hints
+        # Setup window hints
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.setWindowFlag(Qt.WindowMinimizeButtonHint, False)
         self.setWindowFlag(Qt.WindowMaximizeButtonHint, False)
@@ -61,7 +65,55 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionOpen_Console.triggered.connect(self.open_logging_console)
         self.actionAuto_Resize.triggered.connect(self._update_auto_resize)
         self.actionStays_On_Top.triggered.connect(self._update_stays_on_top)
+        self.actionBorderless.triggered.connect(self._update_borderless)
+        self.actionMinimize_Window.triggered.connect(self.minimize)
+        self.actionRecenter_Window.triggered.connect(self.recenter_window)
+        self.actionMove_to_Cursor.triggered.connect(self.move_window_to_cursor)
+        
+        # Connect shortcuts to actions
+        self.actionRecenter_Window.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_R))
+        self.actionMove_to_Cursor.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_M))
 
+        # Setup menu bar move on drag behaviour
+        self.menubar: QMenuBar
+        self.menubar.defaultMousePressEvent = self.menubar.mousePressEvent
+        self.menubar.mousePressEvent = self.menu_mouse_press_event
+        self.menubar.defaultMouseMoveEvent = self.menubar.mouseMoveEvent
+        self.menubar.mouseMoveEvent = self.move_window
+        self.menubar.defaultMouseDoubleClickEvent = self.menubar.mouseDoubleClickEvent
+        self.menubar.mouseDoubleClickEvent = self.menu_double_click_event
+
+
+    def move_window(self, event):
+        if not (self.click_pos is None or self.isMaximized()):
+            if event.buttons() == Qt.LeftButton:
+                self.move(self.pos() + event.globalPos() - self.click_pos)
+                self.click_pos = event.globalPos()
+                event.accept()
+                return
+        
+        self.menubar.defaultMouseMoveEvent(event)
+
+    def recenter_window(self):
+        screen = QGuiApplication.screenAt(QCursor().pos())
+        fg = self.frameGeometry()
+        fg.moveCenter(screen.geometry().center())
+        self.move(fg.topLeft())
+    
+    def move_window_to_cursor(self):
+        self.move(QCursor().pos())
+
+    def menu_mouse_press_event(self, event):
+        self._menu_click_time = time.time()
+        self.click_pos = event.globalPos()
+        self.menubar.defaultMousePressEvent(event)
+    
+    def menu_double_click_event(self, event):
+        if (time.time() - self._menu_click_time) * 1000 < 175: #ms
+            self.minimize()
+            event.accept()
+        else:
+            self.menubar.defaultMouseDoubleClickEvent(event)
     
     def get_layout_stretch_steps(self, layout: QBoxLayout):
         """Return the total amount of stretch of the given layout."""
@@ -297,6 +349,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.settings.setValue("pos", self.pos())
             event.accept()
 
+
+    def minimize(self):
+        self.setWindowState(Qt.WindowMinimized)
+
     
     def _switch_panel(self, target_panel: QWidget, easing_curve_type:QEasingCurve.Type=QEasingCurve.OutBounce, amplitude:float=0.25):
         """Initiate switching the currently displayed panel to another by starting an animation."""
@@ -436,7 +492,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def _update_stays_on_top(self):
         self.setWindowFlag(Qt.WindowStaysOnTopHint, self._stays_on_top())
-        self.show()
+        if self._update_flags:
+            self.show()
+
+
+    def _update_borderless(self):
+        self.setWindowFlag(Qt.FramelessWindowHint, self._borderless())
+        if self._update_flags:
+            self.show()
 
   
     def open_logging_console(self):
@@ -481,6 +544,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._config.set("UI", "size", "{},{}".format(self.width(), self.height()))
         self._config.set("UI", "auto_resize", str(self._auto_resize()))
         self._config.set("UI", "stays_on_top", str(self._stays_on_top()))
+        self._config.set("UI", "borderless", str(self._borderless()))
         ###############################
 
         # Save out the updated config
@@ -497,6 +561,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             success = False
         
         ### Setup UI defaults ###
+        self._update_flags = False
         # pos
         pos = self._config.get("UI", "pos", fallback=None)
         try:
@@ -516,6 +581,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # stays_on_top
         self.actionStays_On_Top.setChecked(self._config.getboolean("UI", "stays_on_top", fallback=self._stays_on_top()))
         self._update_stays_on_top()
+        # stays_on_top
+        self.actionBorderless.setChecked(self._config.getboolean("UI", "borderless", fallback=self._borderless()))
+        self._update_borderless()
+        self._update_flags = True
+        self.show()
         ######################
         
         return success

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'maineqYTLS.ui'
+## Form generated from reading UI file 'mainmFzMAR.ui'
 ##
 ## Created by: Qt User Interface Compiler version 5.15.2
 ##
@@ -38,6 +38,16 @@ class Ui_MainWindow(object):
         self.actionStays_On_Top.setObjectName(u"actionStays_On_Top")
         self.actionStays_On_Top.setCheckable(True)
         self.actionStays_On_Top.setChecked(True)
+        self.actionBorderless = QAction(MainWindow)
+        self.actionBorderless.setObjectName(u"actionBorderless")
+        self.actionBorderless.setCheckable(True)
+        self.actionBorderless.setChecked(True)
+        self.actionMinimize_Window = QAction(MainWindow)
+        self.actionMinimize_Window.setObjectName(u"actionMinimize_Window")
+        self.actionRecenter_Window = QAction(MainWindow)
+        self.actionRecenter_Window.setObjectName(u"actionRecenter_Window")
+        self.actionMove_to_Cursor = QAction(MainWindow)
+        self.actionMove_to_Cursor.setObjectName(u"actionMove_to_Cursor")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.vertical_layout = QVBoxLayout(self.centralwidget)
@@ -141,15 +151,20 @@ class Ui_MainWindow(object):
         MainWindow.setMenuBar(self.menubar)
         self.statusBar = QStatusBar(MainWindow)
         self.statusBar.setObjectName(u"statusBar")
-        self.statusBar.setSizeGripEnabled(False)
         MainWindow.setStatusBar(self.statusBar)
 
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuSettings.menuAction())
+        self.menuFile.addAction(self.actionMinimize_Window)
+        self.menuFile.addAction(self.actionRecenter_Window)
+        self.menuFile.addAction(self.actionMove_to_Cursor)
+        self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionOpen_Console)
+        self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionExit_SynthEyes)
         self.menuSettings.addAction(self.actionAuto_Resize)
         self.menuSettings.addAction(self.actionStays_On_Top)
+        self.menuSettings.addAction(self.actionBorderless)
 
         self.retranslateUi(MainWindow)
 
@@ -161,6 +176,10 @@ class Ui_MainWindow(object):
         self.actionOpen_Console.setText(QCoreApplication.translate("MainWindow", u"Open Console", None))
         self.actionAuto_Resize.setText(QCoreApplication.translate("MainWindow", u"Auto Resize", None))
         self.actionStays_On_Top.setText(QCoreApplication.translate("MainWindow", u"Stays On Top", None))
+        self.actionBorderless.setText(QCoreApplication.translate("MainWindow", u"Borderless", None))
+        self.actionMinimize_Window.setText(QCoreApplication.translate("MainWindow", u"Minimize Window", None))
+        self.actionRecenter_Window.setText(QCoreApplication.translate("MainWindow", u"Recenter Window", None))
+        self.actionMove_to_Cursor.setText(QCoreApplication.translate("MainWindow", u"Move to Cursor", None))
         self.btn_quick_select.setText("")
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuSettings.setTitle(QCoreApplication.translate("MainWindow", u"Settings", None))

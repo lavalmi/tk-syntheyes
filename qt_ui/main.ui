@@ -253,7 +253,12 @@
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="actionMinimize_Window"/>
+    <addaction name="actionRecenter_Window"/>
+    <addaction name="actionMove_to_Cursor"/>
+    <addaction name="separator"/>
     <addaction name="actionOpen_Console"/>
+    <addaction name="separator"/>
     <addaction name="actionExit_SynthEyes"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
@@ -262,15 +267,12 @@
     </property>
     <addaction name="actionAuto_Resize"/>
     <addaction name="actionStays_On_Top"/>
+    <addaction name="actionBorderless"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuSettings"/>
   </widget>
-  <widget class="QStatusBar" name="statusBar">
-   <property name="sizeGripEnabled">
-    <bool>false</bool>
-   </property>
-  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
   <action name="actionExit_SynthEyes">
    <property name="text">
     <string>Exit SynthEyes</string>
@@ -301,6 +303,32 @@
    </property>
    <property name="text">
     <string>Stays On Top</string>
+   </property>
+  </action>
+  <action name="actionBorderless">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Borderless</string>
+   </property>
+  </action>
+  <action name="actionMinimize_Window">
+   <property name="text">
+    <string>Minimize Window</string>
+   </property>
+  </action>
+  <action name="actionRecenter_Window">
+   <property name="text">
+    <string>Recenter Window</string>
+   </property>
+  </action>
+  <action name="actionMove_to_Cursor">
+   <property name="text">
+    <string>Move to Cursor</string>
    </property>
   </action>
  </widget>

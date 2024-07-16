@@ -198,7 +198,7 @@ class SynthEyesLauncher(SoftwareLauncher):
             )
 
         elif (sgtk.util.is_windows() or sgtk.util.is_linux()) and "bin" in exec_path:
-            # e.g. C:\Program Files\Autodesk\SynthMaya2017\  or
+            # e.g. C:\Program Files\Autodesk\Maya2017\  or
             #      /usr/autodesk/Maya2017/
             icon_base_path = "".join(exec_path.partition("bin")[0:1])
 

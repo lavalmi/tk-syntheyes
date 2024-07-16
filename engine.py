@@ -178,7 +178,6 @@ class SynthEyesEngine(Engine):
             self.qt_app.setQuitOnLastWindowClosed(True)
             res_dir = os.path.join(self.disk_location, "resources")
             self.qt_app.setWindowIcon(QtGui.QIcon(os.path.join(res_dir, "process_icon_256.png")))
-            self.qt_app
             self.qt_app.setApplicationName(sys.argv[0])
         except Exception as e:
             msg = "Could not create PySide app"
@@ -204,9 +203,6 @@ class SynthEyesEngine(Engine):
         Called when all apps have been initialized
         """
         # Create UI panel for toolkit
-        #import tk_syntheyes
-        #from tk_syntheyes.ui.sgtk_panel import Ui_SgtkPanel
-        #self.ui = Ui_SgtkPanel(self._get_dialog_parent())
         from tk_syntheyes.ui.main_window import MainWindow
         self.ui = MainWindow(self, self._get_dialog_parent())
         
@@ -507,9 +503,36 @@ class SynthEyesEngine(Engine):
     ### Functions ###
 
     def exit(self):
-        self.hlev = SyPy3.SyLevel()
-        if self.hlev.OpenExisting(self._port, self._pin):
-            if self._hlev.core.OK():
+        self._hlev = SyPy3.SyLevel()
+        if self._hlev and self._hlev.OpenExisting(self._port, self._pin):
+            if self._hlev.core and self._hlev.core.OK():
+                self._hlev.ClearChanged()
                 self._hlev.CloseSynthEyes()
         
         self._heartbeat.join(True)
+
+
+    def save_session_as(self, path: str):
+        try:
+            self._hlev.SetSNIFileName(path)
+            self._hlev.SaveIfChanged()
+        except Exception as e:
+            self.log_error("Error during saving to %s\n%s", path, e)
+
+    def get_session_path(self):
+        try:
+            return self._hlev.SNIFileName()
+        except Exception as e:
+            self.log_error("Error accessing the file path\n%s", e)
+        return None
+    
+    def get_syntheyes_connection(self) -> SyPy3.sylevel.SyLevel:
+        if self._hlev is None or not self._hlev.core.OK():
+            self._hlev = SyPy3.SyLevel()
+            if not self._hlev.OpenExisting(self._port, self._pin):
+                raise Exception("Connection to SynthEyes can not be established. Make sure there is a running SynthEyes instance that was launched via ShotGrid.")
+            
+        return self._hlev
+    
+    def get_syntheyes_hwnd(self):
+        return int(self._hlev.Main().HWND(), 16)

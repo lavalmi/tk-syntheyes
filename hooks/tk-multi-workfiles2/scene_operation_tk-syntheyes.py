@@ -72,9 +72,7 @@ class SceneOperation(HookClass):
         """
 
         engine: SynthEyesEngine = sgtk.platform.current_engine()
-        hlev = engine._hlev
-        if hlev is None:
-            raise Exception("No active SynthEyes connection")
+        hlev = engine.get_syntheyes_connection()
 
         if operation == "current_path":
             return hlev.SNIFileName()
@@ -83,15 +81,19 @@ class SceneOperation(HookClass):
             return bool(hlev.OpenSNI(file_path))
 
         elif operation == "save":
-            hlev.SaveIfChanged()
+            scene = hlev.Scene()
+            scene.Call("Save", file_path)
 
         elif operation == "save_as":
+            scene = hlev.Scene()
+            scene.Call("Save", file_path)
             hlev.SetSNIFileName(file_path)
-            hlev.SaveIfChanged()
 
         elif operation == "reset":
-            hlev.SaveIfChanged()
-            hlev.ClickTopMenuAndWait("File", "Close")
+            changed = hlev.HasChanged()
+            hlev.ClearChanged()
+            if changed:
+                hlev.ClickTopMenuAndWait("File", "Close")
             return True
         
         elif operation == "prepare_new":

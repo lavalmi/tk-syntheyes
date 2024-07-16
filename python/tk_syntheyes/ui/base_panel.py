@@ -21,7 +21,7 @@ class BasePanel(QWidget, Ui_BasePanel):
     def insert_widget(self, widget: QWidget, row=-1, column=1, row_span=1, column_span=1):
         if row < 0:
             row = self.gridLayout.rowCount() - 1
-        size_policy = QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
+        size_policy = QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         size_policy.setHorizontalStretch(0)
         size_policy.setVerticalStretch(0)
         size_policy.setHeightForWidth(widget.sizePolicy().hasHeightForWidth())
