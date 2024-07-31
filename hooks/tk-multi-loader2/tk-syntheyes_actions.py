@@ -155,6 +155,10 @@ class SyntheyesActions(HookBaseClass):
         hlev = engine.get_syntheyes_connection()
 
         hlev.Begin()
-        obj: SyObj = hlev.CreateNew("MESH")
-        obj.Call("ReadMesh", path)
-        hlev.Accept("Import Mesh")
+        try:
+            obj: SyObj = hlev.CreateNew("MESH")
+            obj.Call("ReadMesh", path)
+        except Exception as e:
+            raise e
+        finally:
+            hlev.Accept("Import Mesh")

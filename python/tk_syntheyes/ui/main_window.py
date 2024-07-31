@@ -159,7 +159,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self._engine.log_debug("%s already exists in parent panel %s", name, parent_panel.name)
                 return None
         
-        panel: QWidget = panel_type(self)
+        panel: panel_type = panel_type(self)
         panel.setVisible(visible)
         panel.setEnabled(enabled)
         panel.name = name
@@ -270,7 +270,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 # create new sub menu
                 sub_panel: BasePanel = self._init_panel(BasePanel, item_label, panel, False, False, False) #TODO Consider whether the sub panels should be added to the quick select or not
                 self._link_panel(panel.insert_menu_button(sub_panel), sub_panel)
-                self._link_panel(sub_panel.make_sub_panel(panel), panel)
                 panel = sub_panel
 
         # Finally create the command button
@@ -316,8 +315,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._main_panel.btn_context = self._main_panel.insert_menu_button(self._context_panel)
         self._main_panel.btn_context.setText(context_name)
         self._link_panel(self._main_panel.btn_context, self._context_panel)
-        self._main_panel.insert_line()        
+                
+        ######### DEBUG #########
+        from helper_functions import strtobool
+
+        if strtobool(os.environ.get("__DEV__", None)):
+            self.generate_dev_panel()
         #########################
+
+        self._main_panel.insert_line()
 
         # Initialize all available app commands
         self._init_commands()
@@ -338,6 +344,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             pref_size = self._get_preferred_panel_size(self._main_panel)
             if pref_size is not None:
                 self.resize(pref_size)
+
+
+    def generate_dev_panel(self):
+        self._dev_panel: BasePanel = self._init_panel(BasePanel, "DEV", self._main_panel)
+        self._link_panel(self._main_panel.insert_menu_button(self._dev_panel), self._dev_panel)
+        
+        #self._dev_panel.insert_button(text="Test Export", callback=lambda: export_test(self._engine))
 
 
     def closeEvent(self, event):

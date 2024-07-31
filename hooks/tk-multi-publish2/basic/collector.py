@@ -12,6 +12,7 @@ import os
 import re
 import sgtk
 import SyPy3
+from SyPy3.syobj import SyObj
 
 from engine import SynthEyesEngine
 
@@ -77,7 +78,10 @@ class SyntheyesSessionCollector(HookBaseClass):
         # create an item representing the current syntheyes session
         session_item = self.collect_current_syntheyes_session(settings, parent_item)
 
-        #self.collect_cameras(settings, session_item)
+        self.collect_cameras(settings, session_item)
+        self.collect_camera_tracks(settings, session_item)
+        self.collect_object_tracks(settings, session_item)
+        self.collect_geometry(settings, session_item)
     
     def collect_current_syntheyes_session(self, settings, parent_item):
         """
@@ -93,11 +97,10 @@ class SyntheyesSessionCollector(HookBaseClass):
 
         # retrieve connection to SynthEyes from the engine
         engine: SynthEyesEngine = publisher.engine
-        if engine is None:
-            return None
+        hlev = engine.get_syntheyes_connection()
         
         # get the path to the current file
-        path = engine._hlev.SNIFileName()
+        path = hlev.SNIFileName()
 
         # determine the display name for the item
         if path:
@@ -110,6 +113,7 @@ class SyntheyesSessionCollector(HookBaseClass):
         session_item = parent_item.create_item(
             "syntheyes.session", "SynthEyes File", display_name
         )
+        session_item.properties["publish_type"] = "SynthEyes Scene"
 
         # get the icon path to display for this item
         icon_path = os.path.join(self.disk_location, os.pardir, "icons", "syntheyes.png")
@@ -139,33 +143,85 @@ class SyntheyesSessionCollector(HookBaseClass):
 
         # retrieve connection to SynthEyes from the engine
         engine: SynthEyesEngine = publisher.engine
-        if engine is None:
-            return None
+        hlev = engine.get_syntheyes_connection()
 
-        # get SynthEyes connection
-        hlev = engine._hlev
-        cams = hlev.Cameras()
-
-        # return if no camera is present
-        if len(cams) == 0:
-            return None
-
+        # get the icon path to display for this item
+        icon_path = os.path.join(self.disk_location, os.pardir, "icons", "camera.png")
 
         # iterate over all cameras
-        cam: SyPy3.syobj.SyObj
-        for cam in cams:
-            parent_item.create_item("syntheyes.session.camera", "camera", cam.Name())
-
-            #TODO add icon & set icon path
+        cam: SyObj
+        for cam in hlev.Cameras():
+            cam_item = parent_item.create_item("syntheyes.camera", "Camera", cam.Name())
+            cam_item.set_icon_from_path(icon_path)
+            cam_item.properties["unique_id"] = cam.uniqueID
 
     def collect_object_tracks(self, settings, parent_item):
-        pass
+        """
+        Creates and adds items to the parent_item, each of which represents an object track in the current SynthEyes session.
 
-    def collect_trackers(self, settings, parent_item):
-        pass
+        :param dict settings: Configured settings for this collector
+        :param parent_item: Parent Item instance
+        """
+        # retrieve connection to SynthEyes from the engine
+        publisher = self.parent
+        engine: SynthEyesEngine = publisher.engine
+        hlev = engine.get_syntheyes_connection()
 
-    def collect_geometries(self, settings, parent_item):
-        pass
+        icon_path = os.path.join(self.disk_location, os.pardir, "icons", "object_track.png")
+
+        cams = hlev.Cameras()       
+        obj: SyObj
+        for obj in hlev.Objects():
+            if obj in cams or not obj.Trackers(): continue
+            
+            # get the icon path to display for this item
+            item = parent_item.create_item("syntheyes.object_track", "Object Track", obj.Name())
+            item.set_icon_from_path(icon_path)
+
+    def collect_camera_tracks(self, settings, parent_item):
+        """
+        Creates and adds items to the parent_item, each of which represents a camera track in the current SynthEyes session.
+
+        :param dict settings: Configured settings for this collector
+        :param parent_item: Parent Item instance
+        """
+        # retrieve connection to SynthEyes from the engine
+        publisher = self.parent
+        engine: SynthEyesEngine = publisher.engine
+        hlev = engine.get_syntheyes_connection()
+
+        # get the icon path to display for this item
+        icon_path = os.path.join(self.disk_location, os.pardir, "icons", "camera_track.png")
+
+        # iterate over all cameras
+        cam: SyObj
+        for cam in hlev.Cameras():
+            if not cam.Trackers(): continue
+            cam_item = parent_item.create_item("syntheyes.camera_track", "Camera Track", cam.Name())
+            cam_item.set_icon_from_path(icon_path)
+            cam_item.properties["unique_id"] = cam.uniqueID
+
+    def collect_geometry(self, settings, parent_item):
+        """
+        Creates and adds an item to the parent_item that represents all static geometries in the current SynthEyes session.
+
+        :param dict settings: Configured settings for this collector
+        :param parent_item: Parent Item instance
+        """
+        # retrieve connection to SynthEyes from the engine
+        publisher = self.parent
+        engine: SynthEyesEngine = publisher.engine
+        hlev = engine.get_syntheyes_connection()
+
+        # if one static mesh is present, attach the scene geometry item and return
+        mesh: SyObj
+        for mesh in hlev.Meshes():
+            if not mesh.Get("obj"):
+                # get the icon path to display for this item
+                icon_path = os.path.join(self.disk_location, os.pardir, "icons", "geometry.png")
+                geometry_item = parent_item.create_item("syntheyes.geometry", "Geometry", "Scene Geometry")
+                geometry_item.set_icon_from_path(icon_path)
+                break
 
     def collect_distortion_maps(self, settings, parent_item):
         pass

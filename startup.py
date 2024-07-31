@@ -14,12 +14,6 @@ import sys
 import sgtk
 from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
 
-### DEBUG ###
-import builtins
-builtins.DEBUG = os.environ.get("__DEBUG__")
-sys.path.append(os.path.dirname(__file__))
-from helper_functions import strtobool    
-#############
 
 class SynthEyesLauncher(SoftwareLauncher):
     """
@@ -86,17 +80,13 @@ class SynthEyesLauncher(SoftwareLauncher):
         os.environ["SGTK_SYNTHEYES_PIN"] = str(pin)
         self.logger.debug("SynthEyes will be started using port:%d and pin:%s.", port, pin)
 
-        if not strtobool(getattr(builtins, "DEBUG", None)):
-            args = " ".join([args, '-port', str(port), '-pin', pin])
+        args = " ".join([args, '-port', str(port), '-pin', pin])
 
         # Run the engine's bootstrap.py file when SynthEyes starts up
         # by appending it to the start arguments
         startup_path = os.path.join(self.disk_location, "startup", "bootstrap.py")
         if startup_path:
-            if strtobool(getattr(builtins, "DEBUG", None)):
-                args = " ".join([args, startup_path])
-            else:
-                args = " ".join([args, "-start", startup_path])
+            args = " ".join([args, "-start", startup_path])
 
         # Set the syntheyes python path to point to the shotgun python executable to ensure package compatibility. Ignore this If the path is already present to allow overwriting the default path if necessary.
         if not os.environ.get("SYNTHEYES_PYTHON_PATH"):
@@ -162,7 +152,7 @@ class SynthEyesLauncher(SoftwareLauncher):
             required_env["SGTK_ENGINE"] = self.engine_name
             required_env["SGTK_CONTEXT"] = sgtk.context.serialize(self.context)
 
-        if not strtobool(getattr(builtins, "DEBUG", None)) and file_to_open:
+        if file_to_open:
             # Add the file name to open to the launch arguments
             args = " ".join(file_to_open)
 

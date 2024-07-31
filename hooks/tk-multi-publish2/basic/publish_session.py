@@ -185,7 +185,7 @@ class SynthEyesSessionPublishPlugin(HookBaseClass):
         self.logger.info(
             "SynthEyes '%s' plugin accepted the current SynthEyes session." % (self.name,)
         )
-        return {"accepted": True, "checked": True}
+        return {"accepted": True, "checked": True, "enabled": False}
 
     def validate(self, settings, item):
         """
@@ -215,6 +215,17 @@ class SynthEyesSessionPublishPlugin(HookBaseClass):
             self.logger.error(error_msg, extra=_get_save_as_action())
             raise Exception(error_msg)
 
+        # ---- check if the session contains unsaved changes
+        hlev = engine.get_syntheyes_connection()
+        if hlev.HasChanged():
+            error_msg = "The SynthEyes session has unsaved changes. Make sure to save your file first."
+            self.logger.error(
+                error_msg,
+                extra=_get_save_action(),
+            )
+            raise Exception(error_msg)
+            
+
         # ---- check the session against any attached work template
 
         # get the path in a normalized state. no trailing separator,
@@ -229,17 +240,8 @@ class SynthEyesSessionPublishPlugin(HookBaseClass):
         if work_template:
             if not work_template.validate(path):
                 self.logger.warning(
-                    "The current session does not match the configured work "
-                    "template.",
-                    extra={
-                        "action_button": {
-                            "label": "Save File",
-                            "tooltip": "Save the current SynthEyes session to a "
-                            "different file name",
-                            # will launch wf2 if configured
-                            "callback": _get_save_as_action(),
-                        }
-                    },
+                    "The current session does not match the configured work template.",
+                    extra=_get_save_as_action(),
                 )
             else:
                 self.logger.debug("Work template configured and matches session file.")
@@ -341,7 +343,7 @@ def _get_save_as_action():
     engine = sgtk.platform.current_engine()
 
     # default save callback
-    callback = engine.save_as
+    callback = engine.save_session_as
 
     # if workfiles2 is configured, use that for file save
     if "tk-multi-workfiles2" in engine.apps:
@@ -354,5 +356,21 @@ def _get_save_as_action():
             "label": "Save As...",
             "tooltip": "Save the current session",
             "callback": callback,
+        }
+    }
+
+def _get_save_action():
+    """
+    Simple helper for returning a log action dict for saving unsaved changes in the current session
+    """
+
+    engine: SynthEyesEngine = sgtk.platform.current_engine()
+    callback = engine.save_session
+
+    return {
+        "action_button": {
+            "label": "Save",
+            "tooltip": "Save unsaved changes",
+            "callback": callback
         }
     }

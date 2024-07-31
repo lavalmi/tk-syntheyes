@@ -83,11 +83,13 @@ class SceneOperation(HookClass):
         elif operation == "save":
             scene = hlev.Scene()
             scene.Call("Save", file_path)
+            hlev.ClearChanged()
 
         elif operation == "save_as":
             scene = hlev.Scene()
             scene.Call("Save", file_path)
             hlev.SetSNIFileName(file_path)
+            hlev.ClearChanged()
 
         elif operation == "reset":
             changed = hlev.HasChanged()

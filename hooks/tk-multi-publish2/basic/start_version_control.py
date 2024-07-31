@@ -205,13 +205,13 @@ class SynthEyesStartVersionControlPlugin(HookBaseClass):
         path = sgtk.util.ShotgunPath.normalize(engine.get_session_path())
 
         # ensure the session is saved in its current state
-        engine.save_session_as(path) #TODO This most likely causes issues with SynthEyes due to the save if changed function behaviour
+        engine.save_session_as(path) 
 
         # get the path to a versioned copy of the file.
         version_path = publisher.util.get_version_path(path, "v001")
 
         # save to the new version path
-        engine.save_session_as(path) #TODO This most likely causes issues with SynthEyes due to the save if changed function behaviour
+        engine.save_session_as(path) 
         self.logger.info("A version number has been added to the SynthEyes file...")
         self.logger.info("  SynthEyes file path: %s" % (version_path,))
 

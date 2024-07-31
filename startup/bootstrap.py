@@ -16,10 +16,6 @@ It sets up the Toolkit context and prepares the tk-syntheyes engine.
 import os
 import sys
 
-### DEBUG ###
-import builtins
-builtins.DEBUG = os.environ.get("__DEBUG__")
-#############
 
 g_engine = None
 
