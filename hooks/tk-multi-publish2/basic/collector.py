@@ -172,11 +172,12 @@ class SyntheyesSessionCollector(HookBaseClass):
         cams = hlev.Cameras()       
         obj: SyObj
         for obj in hlev.Objects():
-            if obj in cams or not obj.Trackers(): continue
+            if obj in cams: continue
             
             # get the icon path to display for this item
             item = parent_item.create_item("syntheyes.object_track", "Object Track", obj.Name())
             item.set_icon_from_path(icon_path)
+            item.properties["unique_id"] = obj.uniqueID
 
     def collect_camera_tracks(self, settings, parent_item):
         """
@@ -216,12 +217,14 @@ class SyntheyesSessionCollector(HookBaseClass):
         # if one static mesh is present, attach the scene geometry item and return
         mesh: SyObj
         for mesh in hlev.Meshes():
-            if not mesh.Get("obj"):
-                # get the icon path to display for this item
-                icon_path = os.path.join(self.disk_location, os.pardir, "icons", "geometry.png")
-                geometry_item = parent_item.create_item("syntheyes.geometry", "Geometry", "Scene Geometry")
-                geometry_item.set_icon_from_path(icon_path)
-                break
+            if not mesh.Get("obj") and mesh.Get("isExported"):
+                file = mesh.Get("file")
+                if not file or len(file) < 4 or file[-4:].lower() != ".xyz":
+                    # get the icon path to display for this item
+                    icon_path = os.path.join(self.disk_location, os.pardir, "icons", "geometry.png")
+                    geometry_item = parent_item.create_item("syntheyes.geometry", "Geometry", "Scene Geometry")
+                    geometry_item.set_icon_from_path(icon_path)
+                    break
 
     def collect_distortion_maps(self, settings, parent_item):
         pass

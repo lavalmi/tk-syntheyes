@@ -4,11 +4,11 @@ d rescale 0.01
 d useLensDistort 0
 d allowSolverDistortion 1
 s mapext 65787200
-s writeOBJs 3000
-s display_mode 6f666600
-s render_mode 6f666600
+s writeOBJs 3300
+s display_mode 776972656672616d6500
+s render_mode 776972656672616d6500
 d sclx 1
-s renderTrackers 2d3100
+s renderTrackers 3200
 s doScreen 3000
 s uvScreenMode 3100
 d nomgrid 64

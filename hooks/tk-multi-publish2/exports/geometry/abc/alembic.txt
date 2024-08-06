@@ -8,7 +8,7 @@ d normals 1
 d scaling 1
 d fixAD 1
 d doQuad 1
-d markers 1
+d markers 0
 d trksiz 0
 d doScreen 0
 s usePreprocessor 3100

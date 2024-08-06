@@ -8,15 +8,17 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-import SyPy3.symenu
-import SyPy3.sywin
 import sgtk
 from sgtk.platform.qt import QtGui
 
 from engine import SynthEyesEngine
 import SyPy3
+import SyPy3.sywin
 from SyPy3.sywin import SyWin
+import SyPy3.symenu
 from SyPy3.symenu import SyMenu
+
+import os
 
 HookClass = sgtk.get_hook_baseclass()
 
@@ -92,11 +94,27 @@ class SceneOperation(HookClass):
             hlev.ClearChanged()
 
         elif operation == "reset":
-            changed = hlev.HasChanged()
             hlev.ClearChanged()
-            if changed:
-                hlev.ClickTopMenuAndWait("File", "Close")
+            hlev.ClickTopMenuAndWait("File", "Close")
             return True
         
         elif operation == "prepare_new":
-            hlev.ClickTopMenuAndContinue("File", "New")
+            #hlev.ClickTopMenuAndContinue("File", "New")
+            try:
+                from PySide2.QtWidgets import QFileDialog
+
+                if hasattr(context, "entity_locations") and len(context.entity_locations):
+                    start_path = context.entity_locations[0]
+                    footage_path = os.path.join(start_path, "Footage")
+                    if os.path.exists(footage_path):
+                        start_path = footage_path
+                else:
+                    start_path = context.sgtk.project_path
+
+                new_file = QFileDialog.getOpenFileName(engine.ui, "Select Image File", start_path)
+                
+                if new_file[0]:
+                    hlev.NewSceneAndShot(new_file[0])
+                    hlev.ClickTopMenuAndContinue("Shot", "Edit Shot")
+            except Exception as e:
+                self.logger.error("Could not open the selected image file.\n%s", e)

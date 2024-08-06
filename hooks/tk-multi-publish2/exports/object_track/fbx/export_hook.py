@@ -15,16 +15,20 @@ def prepare(engine, settings, item):
         
     hlev.Begin()
     try:
-        obj: SyObj
-        for list in (hlev.Meshes(), hlev.Lights()):
+        for list in (hlev.Cameras(), hlev.Lights()):
             for obj in list:
-                obj.Set("isExported", False)
+                obj.isExported = False
 
         item_unique_id = item.get_property("unique_id")
-        obj: SyObj
-        for obj in hlev.Objects():
-            obj.Set("isExported", obj.uniqueID == item_unique_id)
-    
+
+        for mesh in hlev.Meshes():
+            if not mesh.obj or mesh.obj.uniqueID != item_unique_id or mesh.file[-4:].lower() == ".xyz":
+                mesh.isExported = False
+
+        for tracker in hlev.Trackers():
+            if tracker.obj.uniqueID != item_unique_id:
+                tracker.isExported = False
+
     except Exception as e: raise e
     finally: hlev.Accept("Prepare Export")
         

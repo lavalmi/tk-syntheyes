@@ -139,6 +139,20 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
         """
         return ["syntheyes.*"]
 
+    @property
+    def item_property_cache(self):
+        """
+        Backup of each valid item's properties. Since, in this case, mutliple
+        plugins may work on the same item with varying publish paths, it cannot 
+        be guaranteed that the properties of the article will remain the same as 
+        they were at the time of validation.
+        Therefore, the state of the item's properties is cached here and re-set
+        before publishing.
+        """
+        if not hasattr(self, "_item_property_cache"):
+            self._item_property_cache = {}
+        return self._item_property_cache
+
     def accept(self, settings, item):
         """
         Method called by the publisher to determine if an item is of any
@@ -253,7 +267,7 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
         # get the current scene path and extract fields from it using the work template:
         work_fields = work_template.get_fields(path)
         # set the export_name and export_extension for syntheyes required to resolve the publish path
-        work_fields["syntheyes.export_name"] = item.name
+        work_fields["syntheyes.export_name"] = item.name.replace(" ", "_")
         work_fields["syntheyes.export_extension"] = settings["extension"].value
 
         # ensure the fields work for the publish template
@@ -276,7 +290,10 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
             item.properties["publish_version"] = work_fields["version"]
 
         # run the base class validation
-        return super(SyntheyesExportPublishPlugin, self).validate(settings, item)
+        if super(SyntheyesExportPublishPlugin, self).validate(settings, item):
+            self.item_property_cache[id(item)] = dict(item.properties)
+            return True
+        return False
 
     def publish(self, settings, item):
         """
@@ -287,6 +304,9 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
             instances.
         :param item: Item to process
         """
+
+        item.properties.clear()
+        item.properties.update(self.item_property_cache[id(item)])
 
         publisher = self.parent
         engine = publisher.engine
@@ -304,6 +324,8 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
         except Exception as e:
             self.logger.error("Failed to export {} {}: {}".format(item.type_spec, item.name, e))
             return
+
+        #raise Exception("DEBUG do not publish")
 
         # Now that the path has been generated, hand it off to the
         super(SyntheyesExportPublishPlugin, self).publish(settings, item)
@@ -348,18 +370,19 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
         shutil.copy(export_sticky_abs, sticky)
 
         ### 4. find and execute export_hook.py
-        import importlib
-        from pathlib import Path
         hook_path = os.path.abspath(os.path.join(exporter, export_hook))
-        hook_spec = importlib.util.spec_from_file_location(Path(export_hook).stem, hook_path)
         hook = None
+        if os.path.isfile(hook_path):
+            import importlib
+            from pathlib import Path
+            hook_spec = importlib.util.spec_from_file_location(Path(export_hook).stem, hook_path)
 
-        if hook_spec:
-            self.logger.info("Loading export hook: %s", hook_path)
-            hook = importlib.util.module_from_spec(hook_spec)
-            hook_spec.loader.exec_module(hook)
-            if hook and hasattr(hook, "prepare"):
-                hook.prepare(engine, settings, item)
+            if hook_spec:
+                self.logger.info("Loading export hook: %s", hook_path)
+                hook = importlib.util.module_from_spec(hook_spec)
+                hook_spec.loader.exec_module(hook)
+                if hook and hasattr(hook, "prepare"):
+                    hook.prepare(engine, settings, item)
 
         ### 5. actual export
         if hook and hasattr(hook, "export"):

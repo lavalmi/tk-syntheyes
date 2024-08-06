@@ -16,7 +16,7 @@ def prepare(engine, settings, item):
     hlev.Begin()
     try:
         # disable export for all meshes and trackers
-        for list in (hlev.Meshes(), hlev.Trackers()):
+        for list in (hlev.Meshes(), hlev.Trackers(), hlev.Lights()):
             obj: SyObj
             for obj in list:
                 obj.Set("isExported", False)

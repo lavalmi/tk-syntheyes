@@ -5,7 +5,7 @@ d userStart 0
 s which 3100
 s wantZup 3000
 d normals 1
-d scaling 0.01
+d scaling 1
 d fixAD 1
 d doQuad 1
 d markers 0

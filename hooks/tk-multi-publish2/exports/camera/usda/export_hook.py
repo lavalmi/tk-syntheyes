@@ -15,16 +15,32 @@ def prepare(engine, settings, item):
         
     hlev.Begin()
     try:
-        obj: SyObj
-        for list in (hlev.Meshes(), hlev.Lights()):
+        # disable export for all meshes and trackers
+        for list in (hlev.Meshes(), hlev.Lights(), hlev.Trackers()):
+            obj: SyObj
             for obj in list:
                 obj.Set("isExported", False)
 
+        # disable export for all objects except the one corresponding to this item 
         item_unique_id = item.get_property("unique_id")
+        
+        # Even though an object is not to be exported, usda still generates a root node for said object.
+        # Therefore, use delete here as well. Take note that the active object must not be deleted. Thus, the current item's camera 
+        # has to be made the active object before deleting the current one.
+        active_obj = hlev.Active()
+        cam = None
         obj: SyObj
         for obj in hlev.Objects():
-            obj.Set("isExported", obj.uniqueID == item_unique_id)
-    
+            if obj.uniqueID == item_unique_id:
+                cam = obj
+                hlev.SetActive(cam)
+                active_obj = cam
+            elif obj is not active_obj:
+                hlev.Delete(obj)
+
+        if cam is not active_obj:
+            hlev.Delete(active_obj)
+        
     except Exception as e: raise e
     finally: hlev.Accept("Prepare Export")
         

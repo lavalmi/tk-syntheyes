@@ -15,29 +15,24 @@ def prepare(engine, settings, item):
         
     hlev.Begin()
     try:
-        mesh: SyObj
-        for mesh in hlev.Meshes():
-            mesh.Set("isExported", False)
-
-        # create new object to hold the trackers for the export
-        mob = hlev.CreateNew("OBJ")
-        mob.SetName(item.name)
-        
-        item_unique_id = item.get_property("unique_id")
-
-        obj: SyObj
-        for obj in hlev.Objects():
-            if obj.uniqueID != mob.uniqueID:
+        # disable export for all meshes and trackers
+        for list in (hlev.Meshes(), hlev.Lights()):
+            obj: SyObj
+            for obj in list:
                 obj.Set("isExported", False)
 
-                if obj.uniqueID == item_unique_id:
-                    tracker: SyObj
-                    for tracker in obj.Trackers():
-                        tracker.obj = mob
-                else:
-                    for tracker in obj.Trackers():
-                        tracker.Set("isExported", False)
-    
+
+        # disable export for all cameras except the one corresponding to this item 
+        item_unique_id = item.get_property("unique_id")
+        obj: SyObj
+        for obj in hlev.Objects():
+            obj.Set("isExported", obj.uniqueID == item_unique_id)
+            
+            # The alembic exporter still writes an empty node for trackers even though no tracker is exportable. Therefore delete them instead.
+            if obj.uniqueID == item_unique_id:
+                for tracker in obj.Trackers():
+                    hlev.Delete(tracker)
+        
     except Exception as e: raise e
     finally: hlev.Accept("Prepare Export")
         

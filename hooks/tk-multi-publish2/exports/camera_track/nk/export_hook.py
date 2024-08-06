@@ -15,24 +15,19 @@ def prepare(engine, settings, item):
         
     hlev.Begin()
     try:
-        # create new object to hold the trackers for the export
-        mob = hlev.CreateNew("OBJ")
-        mob.SetName(item.name)
-        
-        item_unique_id = item.get_property("unique_id")
+        obj: SyObj
+        for list in (hlev.Meshes(), hlev.Lights()):
+            for obj in list:
+                obj.isExported = False
 
+        item_unique_id = item.get_property("unique_id")
         obj: SyObj
         for obj in hlev.Objects():
-            if obj.uniqueID != mob.uniqueID:
-                obj.Set("isExported", False)
-
-                if obj.uniqueID == item_unique_id:
-                    tracker: SyObj
-                    for tracker in obj.Trackers():
-                        tracker.obj = mob
-                else:
-                    for tracker in obj.Trackers():
-                        tracker.Set("isExported", False)
+            obj.isExported = obj.uniqueID == item_unique_id
+        
+        for tracker in hlev.Trackers():
+            if tracker.obj.uniqueID != item_unique_id:
+                tracker.isExported = False
     
     except Exception as e: raise e
     finally: hlev.Accept("Prepare Export")

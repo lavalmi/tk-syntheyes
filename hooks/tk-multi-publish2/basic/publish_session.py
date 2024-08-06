@@ -166,6 +166,7 @@ class SynthEyesSessionPublishPlugin(HookBaseClass):
         """
 
         engine: SynthEyesEngine = self.parent.engine
+        hlev = engine.get_syntheyes_connection()
         # if a publish template is configured, disable context change. This
         # is a temporary measure until the publisher handles context switching
         # natively.
@@ -174,13 +175,12 @@ class SynthEyesSessionPublishPlugin(HookBaseClass):
 
         path = engine.get_session_path()
 
-        if not path:
-            # the session has not been saved before (no path determined).
-            # provide a save button. the session will need to be saved before
-            # validation will succeed.
-            self.logger.warn(
-                "The SynthEyes session has not been saved.", extra=_get_save_as_action()
-            )
+        if not path or hlev.HasChanged():
+            # the session still requires saving. provide a save button.
+            # validation fails.
+            error_msg = "The SynthEyes session has not been saved."
+            self.logger.error(error_msg, extra=_get_save_as_action())
+            raise Exception(error_msg)
 
         self.logger.info(
             "SynthEyes '%s' plugin accepted the current SynthEyes session." % (self.name,)
@@ -205,26 +205,16 @@ class SynthEyesSessionPublishPlugin(HookBaseClass):
 
         engine: SynthEyesEngine = self.parent.engine
         path = engine.get_session_path()
+        hlev = engine.get_syntheyes_connection()
 
         # ---- ensure the session has been saved
 
-        if not path:
+        if not path or hlev.HasChanged():
             # the session still requires saving. provide a save button.
             # validation fails.
             error_msg = "The SynthEyes session has not been saved."
             self.logger.error(error_msg, extra=_get_save_as_action())
             raise Exception(error_msg)
-
-        # ---- check if the session contains unsaved changes
-        hlev = engine.get_syntheyes_connection()
-        if hlev.HasChanged():
-            error_msg = "The SynthEyes session has unsaved changes. Make sure to save your file first."
-            self.logger.error(
-                error_msg,
-                extra=_get_save_action(),
-            )
-            raise Exception(error_msg)
-            
 
         # ---- check the session against any attached work template
 
