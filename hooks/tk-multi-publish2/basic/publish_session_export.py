@@ -39,10 +39,9 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
         """
 
         return """
-        <p>This plugin publishes session geometry for the current session. Any
-        session geometry will be exported to the path defined by this plugin's
-        configured "publish_template" setting. The plugin will fail to validate
-        if the "AbcExport" plugin is not enabled or cannot be found.</p>
+        <p>This plugin publishes items from the current session. The respective
+        data will be exported to the path defined by this plugin's configured 
+        "publish_template" setting.</p>
         """
 
     @property
