@@ -12,6 +12,8 @@ import os
 import sgtk
 import shutil
 
+from pathlib import Path
+
 from engine import SynthEyesEngine
 
 HookBaseClass = sgtk.get_hook_baseclass()
@@ -324,8 +326,6 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
             self.logger.error("Failed to export {} {}: {}".format(item.type_spec, item.name, e))
             return
 
-        #raise Exception("DEBUG do not publish")
-
         # Now that the path has been generated, hand it off to the
         super(SyntheyesExportPublishPlugin, self).publish(settings, item)
 
@@ -341,6 +341,7 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
         export_sticky = settings["export_sticky"].value
 
         sticky_path = os.path.join(os.getenv("APPDATA"), "SynthEyes", "sticky") #TODO Check AppData equivalents on linux and mac and implement os-specific logic if necessary
+        Path(sticky_path).mkdir(parents=True, exist_ok=True)
 
         ### 1. Construct path if exporter was not specified as an absolute path
         if not os.path.isabs(exporter):
@@ -355,11 +356,13 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
         
         ### 2. backup user's export config file
         sticky = os.path.join(sticky_path, export_sticky + ".txt")
-        sticky_backup = sticky + ".user"
-        if os.path.isfile(sticky_backup):
-            os.remove(sticky_backup)
-        os.rename(sticky, sticky_backup)
-        
+        user_sticky = os.path.isfile(sticky)
+        if user_sticky:
+            sticky_backup = sticky + ".user"
+            if os.path.isfile(sticky_backup):
+                os.remove(sticky_backup)
+            os.rename(sticky, sticky_backup)
+    
         ### 3. move publish export file to the sticky config location
         export_sticky_abs = os.path.join(exporter, export_sticky + ".txt")
         if not os.path.exists(export_sticky_abs):
@@ -373,7 +376,6 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
         hook = None
         if os.path.isfile(hook_path):
             import importlib
-            from pathlib import Path
             hook_spec = importlib.util.spec_from_file_location(Path(export_hook).stem, hook_path)
 
             if hook_spec:
@@ -391,7 +393,8 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
 
         ### 6. restore user's export config file
         os.remove(sticky)
-        os.rename(sticky_backup, sticky)
+        if user_sticky:
+            os.rename(sticky_backup, sticky)
 
         ### 7. undo any changes made during the export
         while hlev.UndoCount():
