@@ -13,6 +13,7 @@ import re
 import sgtk
 import SyPy3
 from SyPy3.syobj import SyObj
+from pathlib import Path
 
 from engine import SynthEyesEngine
 
@@ -79,6 +80,7 @@ class SyntheyesSessionCollector(HookBaseClass):
         session_item = self.collect_current_syntheyes_session(settings, parent_item)
 
         self.collect_cameras(settings, session_item)
+        self.collect_distortion_maps(settings, session_item)
         self.collect_camera_tracks(settings, session_item)
         self.collect_object_tracks(settings, session_item)
         self.collect_geometry(settings, session_item)
@@ -227,4 +229,24 @@ class SyntheyesSessionCollector(HookBaseClass):
                     break
 
     def collect_distortion_maps(self, settings, parent_item):
-        pass
+        """
+        Creates and adds an item to the parent_item to export distortion maps for the corresponding shot in the current SynthEyes session.
+
+        :param dict settings: Configured settings for this collector
+        :param parent_item: Parent Item instance
+        """
+        # retrieve connection to SynthEyes from the engine
+        publisher = self.parent
+        engine: SynthEyesEngine = publisher.engine
+        hlev = engine.get_syntheyes_connection()
+
+        for shot in hlev.Shots():          
+            # alternatively use: shot.live.lensHasDistortion -> always outputs True for fisheye lenses
+            # lensAtDefaults reflects whether changes were made to the default values of all lenses.
+            if not shot.live.lensAtDefaults:
+                # get the icon path to display for this item
+                icon_path = os.path.join(self.disk_location, os.pardir, "icons", "distortion_maps.png")
+                dist_item = parent_item.create_item("syntheyes.distortion_maps", "Distortion Maps", shot.cam.Name())
+                dist_item.set_icon_from_path(icon_path)
+                dist_item.properties["unique_id"] = shot.uniqueID
+                dist_item.properties["shot_path"] = shot.Name()
