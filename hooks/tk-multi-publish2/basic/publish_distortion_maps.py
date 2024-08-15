@@ -21,13 +21,13 @@ HookBaseClass = sgtk.get_hook_baseclass()
 
 class SyntheyesDistortionMapsPublishPlugin(HookBaseClass):
     """
-    Plugin for publishing a SynthEyes camera.
+    Plugin for publishing a pair of distortion maps for a SynthEyes camera.
 
     This hook relies on functionality found in the base file publisher hook in
     the publish2 app and should inherit from it in the configuration. The hook
     setting for this plugin should look something like this::
 
-        hook: "{self}/publish_file.py:{engine}/tk-multi-publish2/basic/publish_session.py"
+        hook: "{self}/publish_file.py:{engine}/tk-multi-publish2/basic/publish_distortion_maps.py"
 
     """
 
@@ -242,7 +242,7 @@ class SyntheyesDistortionMapsPublishPlugin(HookBaseClass):
         item.properties["path"] = sgtk.util.ShotgunPath.normalize(publish_template.apply_fields(work_fields))
         item.properties["publish_path"] = item.properties["path"]
 
-        item.properties["publish_name"] = item_name + "_distortion_maps"
+        #item.properties["publish_name"] = item_name + "_distortion_maps"
 
         # use the work file's version number when publishing
         if "version" in work_fields:

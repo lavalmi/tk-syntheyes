@@ -174,14 +174,6 @@ class SynthEyesSessionPublishPlugin(HookBaseClass):
             item.context_change_allowed = False
 
         path = engine.get_session_path()
-
-        if not path or hlev.HasChanged():
-            # the session still requires saving. provide a save button.
-            # validation fails.
-            error_msg = "The SynthEyes session has not been saved."
-            self.logger.error(error_msg, extra=_get_save_as_action())
-            raise Exception(error_msg)
-
         self.logger.info(
             "SynthEyes '%s' plugin accepted the current SynthEyes session." % (self.name,)
         )

@@ -9,9 +9,10 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
+import re
 import sgtk
 import shutil
-
+import time
 from pathlib import Path
 
 from engine import SynthEyesEngine
@@ -19,15 +20,15 @@ from engine import SynthEyesEngine
 HookBaseClass = sgtk.get_hook_baseclass()
 
 
-class SyntheyesExportPublishPlugin(HookBaseClass):
+class SyntheyesUndistortedPlatePublishPlugin(HookBaseClass):
     """
-    Plugin for publishing various exports from the current SynthEyes session.
+    Plugin for publishing an undistorted version of a camera's plate.
 
     This hook relies on functionality found in the base file publisher hook in
     the publish2 app and should inherit from it in the configuration. The hook
     setting for this plugin should look something like this::
 
-        hook: "{self}/publish_file.py:{engine}/tk-multi-publish2/basic/publish_session_export.py"
+        hook: "{self}/publish_file.py:{engine}/tk-multi-publish2/basic/publish_undistorted_plate.py"
 
     """
 
@@ -39,8 +40,8 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
         """
 
         return """
-        <p>This plugin publishes items from the current session. The respective
-        data will be exported to the path defined by this plugin's configured 
+        <p>This plugin publishes an undistorted version of a shot's plate.
+        The respective data will be exported to the path defined by this plugin's configured 
         "publish_template" setting.</p>
         """
 
@@ -64,61 +65,22 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
         part of its environment configuration.
         """
         # inherit the settings from the base publish plugin
-        base_settings = super(SyntheyesExportPublishPlugin, self).settings or {}
+        base_settings = super(SyntheyesUndistortedPlatePublishPlugin, self).settings or {}
 
         # settings specific to this class
         syntheyes_publish_settings = {
-            "publish_template": {
+            "Publish Template": {
                 "type": "template",
                 "default": None,
                 "description": "Template path for published work files. Should"
-                               "correspond to a template defined in "
-                               "templates.yml.",
+                               "correspond to a template defined in templates.yml.",
             },
-            "publish_type": {
-                "type": "str",
+            "Frame Name Template": {
+                "type": "template",
                 "default": None,
-                "description": "",
-            },
-            "checked": {
-                "type": "bool",
-                "default": True,
-                "description": "Is the task checked",
-            },
-            "enabled": {
-                "type": "bool",
-                "default": True,
-                "description": "Is the task editable",
-            },
-            "type_spec": {
-                "type": "str",
-                "default": None,
-                "description": "Item class",
-            },
-            "exporter": {
-                "type": "str",
-                "default": None,
-                "description": "Folder in which to search for the sticky file and export hook",
-            },
-            "export_hook": {
-                "type": "str",
-                "default": "export_hook.py",
-                "description": "Path to the export hook",
-            },
-            "export_type": {
-                "type": "str",
-                "default": None,
-                "description": "SynthEyes export type",
-            },
-            "export_sticky": {
-                "type": "str",
-                "default": None,
-                "description": "SynthEyes sticky file name for export settings",
-            },
-            "extension": {
-                "type": "str",
-                "default": None,
-                "description": "Extension of exported file",
+                "description": "Template name for the frames saved in the published"
+                               "undistorted plate folder. Should correspond to a template"
+                               "defined in templates.yml.",
             },
         }
 
@@ -136,7 +98,7 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
         accept() method. Strings can contain glob patters such as *, for example
         ["maya.*", "file.maya"]
         """
-        return ["syntheyes.*"]
+        return ["syntheyes.undistort_plate"]
 
     @property
     def item_property_cache(self):
@@ -180,7 +142,7 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
         accepted = True
         publisher = self.parent
         engine = publisher.engine
-        template_name = settings["publish_template"].value
+        template_name = settings["Publish Template"].value
 
         # ensure a work file template is available on the parent item
         work_template = item.parent.properties.get("work_template")
@@ -201,24 +163,12 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
             accepted = False
 
         if accepted:
-            if item.type_spec != type_spec(settings):
-                accepted = False
-                self.logger.debug("The item's type spec %s does not match the plugin's type spec %s. Not accepting the item.", item.type_spec, type_spec)
-            else:
-                # we've validated the publish template. add it to the item properties
-                # for use in subsequent methods
-                #item.properties["publish_template"] = publish_template
+            # because a publish template is configured, disable context change. This
+            # is a temporary measure until the publisher handles context switching
+            # natively.
+            item.context_change_allowed = False
 
-                # because a publish template is configured, disable context change. This
-                # is a temporary measure until the publisher handles context switching
-                # natively.
-                item.context_change_allowed = False
-
-        return {
-            "accepted": accepted,
-            "checked": accepted and settings["checked"].value,
-            "enabled": settings["enabled"].value
-        }
+        return { "accepted": accepted, "checked": accepted }
 
     def validate(self, settings, item):
         """
@@ -246,50 +196,39 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
             self.logger.error(error_msg, extra=_get_save_as_action())
             raise Exception(error_msg)
 
-        # ---- check if the session contains unsaved changes
-        #if hlev.HasChanged():
-        #    error_msg = "The SynthEyes session has unsaved changes. Make sure to save your file first."
-        #    self.logger.error(
-        #        error_msg,
-        #        extra=_get_save_action(),
-        #    )
-        #    raise Exception(error_msg)
-
-        item.properties["publish_type"] = settings["publish_type"].value
-        template_name = settings["publish_template"].value
-        publish_template = publisher.get_template_by_name(template_name)
+        item.properties["publish_type"] = "SynthEyes Undistorted Plate"
+        template_id = settings["Publish Template"].value
+        publish_template = publisher.get_template_by_name(template_id)
         item.properties["publish_template"] = publish_template
-
+        
         # get the configured work file template
         work_template = item.parent.properties.get("work_template")
 
         # get the current scene path and extract fields from it using the work template:
         work_fields = work_template.get_fields(path)
-        # set the export_name and export_extension for syntheyes required to resolve the publish path
-        work_fields["syntheyes.export_name"] = item.name.replace(" ", "_")
-        work_fields["syntheyes.export_extension"] = settings["extension"].value
-
-        # ensure the fields work for the publish template
-        missing_keys = publish_template.missing_keys(work_fields)
-        if missing_keys:
-            error_msg = (
-                "Work file '%s' missing keys required for the "
-                "publish template: %s" % (path, missing_keys)
-            )
-            raise Exception(error_msg)
+        # set the export_name for syntheyes required to resolve the publish path
+        item_name = item.name.replace(" ", "_")
+        work_fields["syntheyes.export_name"] = item_name
+        work_fields["syntheyes.frame"] = "1001"
 
         # create the publish path by applying the fields. store it in the item's
         # properties. This is the path we'll create and then publish in the base
         # publish plugin. Also set the publish_path to be explicit.
-        item.properties["path"] = publish_template.apply_fields(work_fields)
+        item.properties["path"] = sgtk.util.ShotgunPath.normalize(publish_template.apply_fields(work_fields))
         item.properties["publish_path"] = item.properties["path"]
+        
+        # get frame name template and apply the work fields to it as well
+        template_id = settings["Frame Name Template"].value
+        frame_name_template = publisher.get_template_by_name(template_id)
+        item.properties["frame_name_template"] = frame_name_template
+        item.properties["frame_name"] = frame_name_template.apply_fields(work_fields)
 
         # use the work file's version number when publishing
         if "version" in work_fields:
             item.properties["publish_version"] = work_fields["version"]
 
         # run the base class validation
-        if super(SyntheyesExportPublishPlugin, self).validate(settings, item):
+        if super(SyntheyesUndistortedPlatePublishPlugin, self).validate(settings, item):
             self.item_property_cache[id(item)] = dict(item.properties)
             return True
         return False
@@ -308,105 +247,86 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
         item.properties.update(self.item_property_cache[id(item)])
 
         publisher = self.parent
-        engine = publisher.engine
+        engine: SynthEyesEngine = publisher.engine
 
         # get the path to create and publish
         publish_path = item.properties["path"]
 
         # ensure the publish folder exists:
-        publish_folder = os.path.dirname(publish_path)
-        self.parent.ensure_folder_exists(publish_folder)
+        self.parent.ensure_folder_exists(publish_path)
 
-        # invokes the respective syntheyes exporter
-        try:
-            self._export(settings, item)
-        except Exception as e:
-            self.logger.error("Failed to export {} {}: {}".format(item.type_spec, item.name, e))
-            return
+        # undistort and export plate
+        hlev = engine.get_syntheyes_connection()
+        for shot in hlev.Shots():
+            if shot.uniqueID == item.properties["unique_id"]:
+                self._render_undistorted_plate(settings, item, shot)
+                break
 
         # Now that the path has been generated, hand it off to the
-        super(SyntheyesExportPublishPlugin, self).publish(settings, item)
+        super(SyntheyesUndistortedPlatePublishPlugin, self).publish(settings, item)
 
-    def _export(self, settings, item):
+    def _render_undistorted_plate(self, settings, item, shot):
         publisher = self.parent
-        engine: SynthEyesEngine = publisher.engine        
+        engine: SynthEyesEngine = publisher.engine
         hlev = engine.get_syntheyes_connection()
-        hlev.FlushUndo()
+        live = shot.live
 
-        exporter = sgtk.util.ShotgunPath.normalize(settings["exporter"].value)
-        export_hook = sgtk.util.ShotgunPath.normalize(settings["export_hook"].value)
-        export_type = settings["export_type"].value
-        export_sticky = settings["export_sticky"].value
-
-        sticky_path = os.path.join(os.getenv("APPDATA"), "SynthEyes", "sticky") #TODO Check AppData equivalents on linux and mac and implement os-specific logic if necessary
-        Path(sticky_path).mkdir(parents=True, exist_ok=True)
-
-        ### 1. Construct path if exporter was not specified as an absolute path
-        if not os.path.isabs(exporter):
-            exporter = os.path.abspath(os.path.join(self.disk_location, os.pardir, "exports", exporter))
-
-        self.logger.info("Loading exporter: %s", exporter)
-
-        if not os.path.exists(exporter):
-            error_msg = "The defined exporter directory does not exist: {}".format(exporter)
-            self.logger.error(error_msg)
-            raise Exception(error_msg)
+        first_undo_block = "Prepare undistorted export"
+        prepset_name = "sgtk_undistort_plate"
+        prepset_path = os.path.abspath(os.path.join(self.disk_location, os.pardir, "prepsets", prepset_name + ".prp"))
+        hlev.BeginShotChanges(shot)
+        try:
+            # 1. disable resampling in preprocessor
+            live.stabilizeMode = float(int(live.stabilizeMode) & ~128)
+            live.Call("MakeStabilizeReference")
         
-        ### 2. backup user's export config file
-        sticky = os.path.join(sticky_path, export_sticky + ".txt")
-        user_sticky = os.path.isfile(sticky)
-        if user_sticky:
-            sticky_backup = sticky + ".user"
-            if os.path.isfile(sticky_backup):
-                os.remove(sticky_backup)
-            os.rename(sticky, sticky_backup)
-    
-        ### 3. move publish export file to the sticky config location
-        export_sticky_abs = os.path.join(exporter, export_sticky + ".txt")
-        if not os.path.exists(export_sticky_abs):
-            error_msg = "The defined export sticky file does not exist: {}".format(sticky)
-            self.logger.error(error_msg)
-            raise Exception(error_msg)
-        shutil.copy(export_sticky_abs, sticky)
+            # 2. setup render settings
+            shot.renderFile = os.path.join(item.properties["path"], item.properties["frame_name"])
+            shot.renderCompression = "exr: <DWAA32 Lossy>,100"
+            
+            # 3. load custom prepset
+            shot.Call("LoadPrepSetsFromFile", 1, prepset_path)
+        except Exception as e: raise e
+        finally: hlev.AcceptShotChanges(shot, first_undo_block)
 
-        ### 4. find and execute export_hook.py
-        hook_path = os.path.abspath(os.path.join(exporter, export_hook))
-        hook = None
-        if os.path.isfile(hook_path):
-            import importlib
-            hook_spec = importlib.util.spec_from_file_location(Path(export_hook).stem, hook_path)
+        # 4. Open 'Save Sequence' via the main menu and configure the export
+        # Due to "Bad Tpye"-Errors when accessing most prepset-related variables, there 
+        # seems to be no way to activate an imported prepset without said errors 
+        # nor does it seem possible to access any kurve properties for the same reason.
+        # Interacting directly with the popup, however, allows to set the prepset and
+        # use it that way.
+        hlev.PerformActionByIDAndContinue(40602) # Shot > Save Sequence
+        timeout, timer = 5, 0 # Seconds
+        # make sure the popup is open before proceeding
+        while hlev.Popup().Name() != "Save Processed Image Sequence": #TODO Find better method to identify the popup other than using its name
+            timer += 0.1
+            if timer >= timeout:
+                raise Exception("Timeout: Popup with title 'Save processed Image Sequence' not found after %ds", timer)
 
-            if hook_spec:
-                self.logger.info("Loading export hook: %s", hook_path)
-                hook = importlib.util.module_from_spec(hook_spec)
-                hook_spec.loader.exec_module(hook)
-                if hook and hasattr(hook, "prepare"):
-                    hook.prepare(engine, settings, item)
+        popup = hlev.Popup()
+        popup.ByID(1346).SetChecked(True) # RGB Included
+        popup.ByID(1570).SetChecked(False) # Alpha Included
+        popup.ByID(2250).SetChecked(False) # Meshes Included
+        popup.ByID(2352).SetChecked(False) # Frame#/Time Burn-in
+        popup.ByID(1400).SetOption(prepset_name) # prepset
 
-        ### 5. actual export
-        if hook and hasattr(hook, "export"):
-            hook.export(engine, settings, item)
-        else:
-            hlev.Export(export_type, item.properties["path"])
+        # 5. start save sequence
+        popup.ByID(1).ClickAndContinue() # Start
+        while popup.IsValid():
+            if popup.hwnd != hlev.Popup().hwnd:
+                # close error dialog
+                error_dialog = hlev.Popup()
+                error_msg = error_dialog.ByID(65535).Name() # text message
+                error_dialog.ByID(2).ClickAndWait() # OK
+                # close sequence popup
+                popup.ByID(2).ClickAndWait() # close
+                raise Exception(error_msg)
+            time.sleep(0.033)
 
-        ### 6. restore user's export config file
-        os.remove(sticky)
-        if user_sticky:
-            os.rename(sticky_backup, sticky)
-
-        ### 7. undo any changes made during the export
-        while hlev.UndoCount():
+        # 6. revert all changes
+        while hlev.UndoCount() and hlev.TopUndoName() != first_undo_block:
             hlev.Undo()
-
-        ### 8. execute hook's cleanup function
-        if hook and hasattr(hook, "cleanup"):
-            hook.cleanup(engine, settings, item)
-
-        hlev.FlushUndo()
-        hlev.ClearChanged()
-
-def type_spec(settings):
-    return "syntheyes." + settings["type_spec"].value
+        hlev.Undo() # Undo once more to revert the first undo block
 
 def _get_save_as_action():
     """
@@ -429,21 +349,5 @@ def _get_save_as_action():
             "label": "Save As...",
             "tooltip": "Save the current session",
             "callback": callback,
-        }
-    }
-
-def _get_save_action():
-    """
-    Simple helper for returning a log action dict for saving unsaved changes in the current session
-    """
-
-    engine: SynthEyesEngine = sgtk.platform.current_engine()
-    callback = engine.save_session
-
-    return {
-        "action_button": {
-            "label": "Save",
-            "tooltip": "Save unsaved changes",
-            "callback": callback
         }
     }

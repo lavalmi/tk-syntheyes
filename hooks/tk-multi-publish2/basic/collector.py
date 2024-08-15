@@ -81,6 +81,7 @@ class SyntheyesSessionCollector(HookBaseClass):
 
         self.collect_cameras(settings, session_item)
         self.collect_distortion_maps(settings, session_item)
+        self.collect_camera_plates(settings, session_item)
         self.collect_camera_tracks(settings, session_item)
         self.collect_object_tracks(settings, session_item)
         self.collect_geometry(settings, session_item)
@@ -250,3 +251,26 @@ class SyntheyesSessionCollector(HookBaseClass):
                 dist_item.set_icon_from_path(icon_path)
                 dist_item.properties["unique_id"] = shot.uniqueID
                 dist_item.properties["shot_path"] = shot.Name()
+
+    def collect_camera_plates(self, settings, parent_item):
+        """
+        Creates and adds an item to the parent_item that represents a plate that can be undistorted.
+
+        :param dict settings: Configured settings for this collector
+        :param parent_item: Parent Item instance
+        """
+        # retrieve connection to SynthEyes from the engine
+        publisher = self.parent
+        engine: SynthEyesEngine = publisher.engine
+        hlev = engine.get_syntheyes_connection()
+
+        for shot in hlev.Shots():          
+            # alternatively use: shot.live.lensHasDistortion -> always outputs True for fisheye lenses
+            # lensAtDefaults reflects whether changes were made to the default values of all lenses.
+            if not shot.live.lensAtDefaults:
+                # get the icon path to display for this item
+                icon_path = os.path.join(self.disk_location, os.pardir, "icons", "undistorted_plate.png")
+                plate_item = parent_item.create_item("syntheyes.undistort_plate", "Undistort Plate", shot.cam.Name())
+                plate_item.set_icon_from_path(icon_path)
+                plate_item.properties["unique_id"] = shot.uniqueID
+                plate_item.properties["shot_path"] = shot.Name()
