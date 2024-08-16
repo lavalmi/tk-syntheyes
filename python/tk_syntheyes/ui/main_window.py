@@ -256,7 +256,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
     def _add_command_button(self, command: AppCommand, panel: BasePanel, row=-1):
-        """Add a button to the given panel and linking its clicking action to the corresponding AppCommand retrieved from the engine."""
+        """Add a button to the given panel and link its clicking action to the corresponding AppCommand retrieved from the engine."""
         # create menu sub-tree if need to:
         # Support menu items separated by '/'
         parts = command.name.split("/")

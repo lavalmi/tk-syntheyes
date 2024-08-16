@@ -269,14 +269,15 @@ class SyntheyesSessionCollector(HookBaseClass):
         engine: SynthEyesEngine = publisher.engine
         hlev = engine.get_syntheyes_connection()
 
-        for shot in hlev.Shots():          
+        for cam in hlev.Cameras():
             # alternatively use: shot.live.lensHasDistortion -> always outputs True for fisheye lenses
             # lensAtDefaults reflects whether changes were made to the default values of all lenses.
+            shot = cam.shot
             if not shot.live.lensAtDefaults:
                 # get the icon path to display for this item
                 icon_path = os.path.join(self.disk_location, os.pardir, "icons", "undistorted_plate.png")
-                plate_item = parent_item.create_item("syntheyes.undistorted_plate", "Undistorted Plate", shot.cam.Name())
+                plate_item = parent_item.create_item("syntheyes.undistorted_plate", "Undistorted Plate", cam.Name())
                 plate_item.set_icon_from_path(icon_path)
-                plate_item.properties["unique_id"] = shot.uniqueID
+                plate_item.properties["unique_id"] = cam.uniqueID
                 plate_item.properties["shot_path"] = shot.Name()
                 plate_item.expanded = False

@@ -257,18 +257,19 @@ class SyntheyesUndistortedPlatePublishPlugin(HookBaseClass):
 
         # undistort and export plate
         hlev = engine.get_syntheyes_connection()
-        for shot in hlev.Shots():
-            if shot.uniqueID == item.properties["unique_id"]:
-                self._render_undistorted_plate(settings, item, shot)
+        for cam in hlev.Cameras():
+            if cam.uniqueID == item.properties["unique_id"]:
+                self._render_undistorted_plate(settings, item, cam)
                 break
 
         # Now that the path has been generated, hand it off to the
         super(SyntheyesUndistortedPlatePublishPlugin, self).publish(settings, item)
 
-    def _render_undistorted_plate(self, settings, item, shot):
+    def _render_undistorted_plate(self, settings, item, camera):
         publisher = self.parent
         engine: SynthEyesEngine = publisher.engine
         hlev = engine.get_syntheyes_connection()
+        shot = camera.shot
         live = shot.live
 
         first_undo_block = "Prepare undistorted export"
@@ -289,7 +290,14 @@ class SyntheyesUndistortedPlatePublishPlugin(HookBaseClass):
         except Exception as e: raise e
         finally: hlev.AcceptShotChanges(shot, first_undo_block)
 
-        # 4. Open 'Save Sequence' via the main menu and configure the export
+        # 4. set the active object to the correct camera
+        hlev.Begin()
+        try:
+            hlev.SetActive(camera)
+        except Exception as e: raise e
+        finally: hlev.Accept("Set " + camera.Name() + " active")
+
+        # 5. Open 'Save Sequence' via the main menu and configure the export
         # Due to "Bad Tpye"-Errors when accessing most prepset-related variables, there 
         # seems to be no way to activate an imported prepset without said errors 
         # nor does it seem possible to access any kurve properties for the same reason.
@@ -310,20 +318,20 @@ class SyntheyesUndistortedPlatePublishPlugin(HookBaseClass):
         popup.ByID(2352).SetChecked(False) # Frame#/Time Burn-in
         popup.ByID(1400).SetOption(prepset_name) # prepset
 
-        # 5. start save sequence
+        # 6. start save sequence
         popup.ByID(1).ClickAndContinue() # Start
         while popup.IsValid():
             if popup.hwnd != hlev.Popup().hwnd:
                 # close error dialog
                 error_dialog = hlev.Popup()
-                error_msg = error_dialog.ByID(65535).Name() # text message
+                error_msg = "{}\n{}\n{}".format(error_dialog.ByID(65535).Name(), shot.renderFile, shot.renderCompression) # text message
                 error_dialog.ByID(2).ClickAndWait() # OK
                 # close sequence popup
                 popup.ByID(2).ClickAndWait() # close
                 raise Exception(error_msg)
             time.sleep(0.033)
 
-        # 6. revert all changes
+        # 7. revert all changes
         while hlev.UndoCount() and hlev.TopUndoName() != first_undo_block:
             hlev.Undo()
         hlev.Undo() # Undo once more to revert the first undo block
