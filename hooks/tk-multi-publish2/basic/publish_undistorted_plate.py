@@ -98,7 +98,7 @@ class SyntheyesUndistortedPlatePublishPlugin(HookBaseClass):
         accept() method. Strings can contain glob patters such as *, for example
         ["maya.*", "file.maya"]
         """
-        return ["syntheyes.undistort_plate"]
+        return ["syntheyes.undistorted_plate"]
 
     @property
     def item_property_cache(self):
@@ -209,7 +209,7 @@ class SyntheyesUndistortedPlatePublishPlugin(HookBaseClass):
         # set the export_name for syntheyes required to resolve the publish path
         item_name = item.name.replace(" ", "_")
         work_fields["syntheyes.export_name"] = item_name
-        work_fields["syntheyes.frame"] = "1001"
+        work_fields["SEQ"] = 1001
 
         # create the publish path by applying the fields. store it in the item's
         # properties. This is the path we'll create and then publish in the base

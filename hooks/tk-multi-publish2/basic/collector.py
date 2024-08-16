@@ -157,6 +157,7 @@ class SyntheyesSessionCollector(HookBaseClass):
             cam_item = parent_item.create_item("syntheyes.camera", "Camera", cam.Name())
             cam_item.set_icon_from_path(icon_path)
             cam_item.properties["unique_id"] = cam.uniqueID
+            cam_item.expanded = False
 
     def collect_object_tracks(self, settings, parent_item):
         """
@@ -181,6 +182,7 @@ class SyntheyesSessionCollector(HookBaseClass):
             item = parent_item.create_item("syntheyes.object_track", "Object Track", obj.Name())
             item.set_icon_from_path(icon_path)
             item.properties["unique_id"] = obj.uniqueID
+            item.expanded = False
 
     def collect_camera_tracks(self, settings, parent_item):
         """
@@ -204,6 +206,7 @@ class SyntheyesSessionCollector(HookBaseClass):
             cam_item = parent_item.create_item("syntheyes.camera_track", "Camera Track", cam.Name())
             cam_item.set_icon_from_path(icon_path)
             cam_item.properties["unique_id"] = cam.uniqueID
+            cam_item.expanded = False
 
     def collect_geometry(self, settings, parent_item):
         """
@@ -227,6 +230,7 @@ class SyntheyesSessionCollector(HookBaseClass):
                     icon_path = os.path.join(self.disk_location, os.pardir, "icons", "geometry.png")
                     geometry_item = parent_item.create_item("syntheyes.geometry", "Geometry", "Scene Geometry")
                     geometry_item.set_icon_from_path(icon_path)
+                    geometry_item.expanded = False
                     break
 
     def collect_distortion_maps(self, settings, parent_item):
@@ -251,6 +255,7 @@ class SyntheyesSessionCollector(HookBaseClass):
                 dist_item.set_icon_from_path(icon_path)
                 dist_item.properties["unique_id"] = shot.uniqueID
                 dist_item.properties["shot_path"] = shot.Name()
+                dist_item.expanded = False
 
     def collect_camera_plates(self, settings, parent_item):
         """
@@ -270,7 +275,8 @@ class SyntheyesSessionCollector(HookBaseClass):
             if not shot.live.lensAtDefaults:
                 # get the icon path to display for this item
                 icon_path = os.path.join(self.disk_location, os.pardir, "icons", "undistorted_plate.png")
-                plate_item = parent_item.create_item("syntheyes.undistort_plate", "Undistort Plate", shot.cam.Name())
+                plate_item = parent_item.create_item("syntheyes.undistorted_plate", "Undistorted Plate", shot.cam.Name())
                 plate_item.set_icon_from_path(icon_path)
                 plate_item.properties["unique_id"] = shot.uniqueID
                 plate_item.properties["shot_path"] = shot.Name()
+                plate_item.expanded = False
