@@ -332,6 +332,8 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
         engine: SynthEyesEngine = publisher.engine        
         hlev = engine.get_syntheyes_connection()
         hlev.FlushUndo()
+        anim_start = hlev.AnimStart()
+        anim_end = hlev.AnimEnd()
 
         exporter = sgtk.util.ShotgunPath.normalize(settings["exporter"].value)
         export_hook = sgtk.util.ShotgunPath.normalize(settings["export_hook"].value)
@@ -401,6 +403,10 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
         ### 8. execute hook's cleanup function
         if hook and hasattr(hook, "cleanup"):
             hook.cleanup(engine, settings, item)
+
+        # reset anim start & end as these are unaffected by the undo system
+        hlev.SetAnimStart(anim_start)
+        hlev.SetAnimEnd(anim_end)
 
         hlev.FlushUndo()
         hlev.ClearChanged()

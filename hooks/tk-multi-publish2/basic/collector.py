@@ -8,6 +8,7 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
+import glob
 import os
 import re
 import sgtk
@@ -61,6 +62,14 @@ class SyntheyesSessionCollector(HookBaseClass):
                 "to publish plugins via the collected item's "
                 "properties. ",
             },
+            "Playblast Template": {
+                "type": "template",
+                "default": None,
+                "description": "Template path for playblast work files. Should "
+                "correspond to a template defined in templates.yml. If configured,"
+                "is made available to publish plugins via the collected item's "
+                "properties. ",
+            },
         }
 
         # update the base settings with these settings
@@ -85,6 +94,7 @@ class SyntheyesSessionCollector(HookBaseClass):
         self.collect_camera_tracks(settings, session_item)
         self.collect_object_tracks(settings, session_item)
         self.collect_geometry(settings, session_item)
+        self.collect_playblasts(settings, session_item)
     
     def collect_current_syntheyes_session(self, settings, parent_item):
         """
@@ -154,7 +164,8 @@ class SyntheyesSessionCollector(HookBaseClass):
         # iterate over all cameras
         cam: SyObj
         for cam in hlev.Cameras():
-            cam_item = parent_item.create_item("syntheyes.camera", "Camera", cam.Name())
+            scene_item = self.get_or_create_item_parent(cam.Name(), icon_path, parent_item)
+            cam_item = scene_item.create_item("syntheyes.camera", "Camera", cam.Name())
             cam_item.set_icon_from_path(icon_path)
             cam_item.properties["unique_id"] = cam.uniqueID
             cam_item.expanded = False
@@ -171,15 +182,17 @@ class SyntheyesSessionCollector(HookBaseClass):
         engine: SynthEyesEngine = publisher.engine
         hlev = engine.get_syntheyes_connection()
 
+        # get the icon path to display for this item
         icon_path = os.path.join(self.disk_location, os.pardir, "icons", "object_track.png")
+        parent_icon_path = os.path.join(self.disk_location, os.pardir, "icons", "object.png")
 
         cams = hlev.Cameras()       
         obj: SyObj
         for obj in hlev.Objects():
             if obj in cams: continue
             
-            # get the icon path to display for this item
-            item = parent_item.create_item("syntheyes.object_track", "Object Track", obj.Name())
+            scene_item = self.get_or_create_item_parent(obj.Name(), parent_icon_path, parent_item)
+            item = scene_item.create_item("syntheyes.object_track", "Object Track", obj.Name())
             item.set_icon_from_path(icon_path)
             item.properties["unique_id"] = obj.uniqueID
             item.expanded = False
@@ -203,7 +216,8 @@ class SyntheyesSessionCollector(HookBaseClass):
         cam: SyObj
         for cam in hlev.Cameras():
             if not cam.Trackers(): continue
-            cam_item = parent_item.create_item("syntheyes.camera_track", "Camera Track", cam.Name())
+            scene_item = self.get_or_create_item_parent(cam.Name(), icon_path, parent_item)
+            cam_item = scene_item.create_item("syntheyes.camera_track", "Camera Track", cam.Name())
             cam_item.set_icon_from_path(icon_path)
             cam_item.properties["unique_id"] = cam.uniqueID
             cam_item.expanded = False
@@ -245,13 +259,16 @@ class SyntheyesSessionCollector(HookBaseClass):
         engine: SynthEyesEngine = publisher.engine
         hlev = engine.get_syntheyes_connection()
 
+        # get the icon path to display for this item
+        icon_path = os.path.join(self.disk_location, os.pardir, "icons", "distortion_maps.png")
+        parent_icon_path = os.path.join(self.disk_location, os.pardir, "icons", "camera.png")
+
         for shot in hlev.Shots():          
             # alternatively use: shot.live.lensHasDistortion -> always outputs True for fisheye lenses
             # lensAtDefaults reflects whether changes were made to the default values of all lenses.
             if not shot.live.lensAtDefaults:
-                # get the icon path to display for this item
-                icon_path = os.path.join(self.disk_location, os.pardir, "icons", "distortion_maps.png")
-                dist_item = parent_item.create_item("syntheyes.distortion_maps", "Distortion Maps", shot.cam.Name())
+                scene_item = self.get_or_create_item_parent(shot.cam.Name(), parent_icon_path, parent_item)
+                dist_item = scene_item.create_item("syntheyes.distortion_maps", "Distortion Maps", shot.cam.Name())
                 dist_item.set_icon_from_path(icon_path)
                 dist_item.properties["unique_id"] = shot.uniqueID
                 dist_item.properties["shot_path"] = shot.Name()
@@ -269,15 +286,84 @@ class SyntheyesSessionCollector(HookBaseClass):
         engine: SynthEyesEngine = publisher.engine
         hlev = engine.get_syntheyes_connection()
 
+        # get the icon path to display for this item
+        icon_path = os.path.join(self.disk_location, os.pardir, "icons", "undistorted_plate.png")
+        parent_icon_path = os.path.join(self.disk_location, os.pardir, "icons", "camera.png")
+
         for cam in hlev.Cameras():
             # alternatively use: shot.live.lensHasDistortion -> always outputs True for fisheye lenses
             # lensAtDefaults reflects whether changes were made to the default values of all lenses.
             shot = cam.shot
             if not shot.live.lensAtDefaults:
-                # get the icon path to display for this item
-                icon_path = os.path.join(self.disk_location, os.pardir, "icons", "undistorted_plate.png")
-                plate_item = parent_item.create_item("syntheyes.undistorted_plate", "Undistorted Plate", cam.Name())
+                scene_item = self.get_or_create_item_parent(cam.Name(), parent_icon_path, parent_item)
+                plate_item = scene_item.create_item("syntheyes.undistorted_plate", "Undistorted Plate", cam.Name())
                 plate_item.set_icon_from_path(icon_path)
                 plate_item.properties["unique_id"] = cam.uniqueID
-                plate_item.properties["shot_path"] = shot.Name()
                 plate_item.expanded = False
+
+    def collect_playblasts(self, settings, parent_item):
+        """
+        Creates and adds an item to the parent_item to publish a rendered playblast from the work files for each camera.
+
+        :param dict settings: Configured settings for this collector
+        :param parent_item: Parent Item instance
+        """
+        # retrieve connection to SynthEyes from the engine
+        publisher = self.parent
+        engine: SynthEyesEngine = publisher.engine
+        hlev = engine.get_syntheyes_connection()     
+            
+        playblast_template_name = settings.get("Playblast Template").value
+        if not playblast_template_name:
+            raise Exception("Can't collect playblasts: Playblast Template is not available in the collector settings.")
+        
+        playblast_template = engine.get_template_by_name(playblast_template_name)
+
+        path = sgtk.util.ShotgunPath.normalize(hlev.SNIFileName())
+        work_template = parent_item.properties.get("work_template")
+        work_fields = work_template.get_fields(path)
+        work_fields["playblast_extension"] = "jpg" #TODO add an option to select png or jpg
+        work_fields["SEQ"] = 9999
+
+        icon_path = os.path.join(self.disk_location, os.pardir, "icons", "playblast.png")
+        parent_icon_path = os.path.join(self.disk_location, os.pardir, "icons", "camera.png")
+
+        for cam in hlev.Cameras():
+            work_fields["syntheyes.export_name"] = cam.Name().replace(" ", "_")
+            playblast_path = playblast_template.apply_fields(work_fields)
+            if not os.path.exists(os.path.dirname(playblast_path)): continue
+
+            playblast_path = playblast_path.replace("9999", "*")
+            self.logger.debug("Searching in: %s" % (playblast_path,))
+            playblast_files = sorted(glob.glob(playblast_path))
+            if not len(playblast_files): continue
+
+            # create and add the item
+            scene_item = self.get_or_create_item_parent(cam.Name(), parent_icon_path, parent_item)
+            item = scene_item.create_item("file.image.sequence", "Playblast", cam.Name())
+
+            item.properties["sequence_paths"] = playblast_files
+            item.properties["first_frame"] = playblast_template.get_fields(playblast_files[0])["SEQ"]
+            item.properties["last_frame"] = playblast_template.get_fields(playblast_files[-1])["SEQ"]
+            item.properties["path"] = playblast_path.replace("*", "%04d")
+
+            # get the icon path to display for this item
+            item.set_icon_from_path(icon_path)
+            item.properties["unique_id"] = cam.uniqueID
+            item.expanded = False
+
+
+    @property
+    def item_parents(self):
+        if not hasattr(self, "_item_parents"):
+            self._item_parents = {}
+        return self._item_parents
+    
+    def get_or_create_item_parent(self, name, icon, parent_item):
+        parent = self.item_parents.get(name)
+        if not parent:
+            parent = parent_item.create_item("syntheyes.scene_item", "Scene Item", name)
+            parent.properties["work_template"] = parent_item.properties.get("work_template")
+            parent.set_icon_from_path(icon)
+            self.item_parents[name] = parent
+        return parent

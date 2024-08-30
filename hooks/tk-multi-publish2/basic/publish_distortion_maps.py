@@ -213,7 +213,6 @@ class SyntheyesDistortionMapsPublishPlugin(HookBaseClass):
         work_fields = work_template.get_fields(path)
         # set the export_name for syntheyes required to resolve the publish path
         item_name = item.name.replace(" ", "_")
-        item_name = re.sub("[.,-,_]*v\d*", "", item_name)
         work_fields["syntheyes.export_name"] = item_name
 
         # ensure the fields work for the publish template
