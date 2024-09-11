@@ -19,6 +19,7 @@ import SyPy3.symenu
 from SyPy3.symenu import SyMenu
 
 import os
+import time
 
 HookClass = sgtk.get_hook_baseclass()
 
@@ -83,38 +84,14 @@ class SceneOperation(HookClass):
             return bool(hlev.OpenSNI(file_path))
 
         elif operation == "save":
-            scene = hlev.Scene()
-            scene.Call("Save", file_path)
-            hlev.ClearChanged()
+            engine.save_session()
 
         elif operation == "save_as":
-            scene = hlev.Scene()
-            scene.Call("Save", file_path)
-            hlev.SetSNIFileName(file_path)
-            hlev.ClearChanged()
+            engine.save_session_as(file_path)
 
         elif operation == "reset":
+            # Ask the user to close popups. Otherwise SynthEyes might crash.
+            engine.prompt_to_close_popup()
             hlev.ClearChanged()
-            hlev.ClickTopMenuAndWait("File", "Close")
+            hlev.PerformActionByIDAndContinue(40610) # File > Close
             return True
-        
-        elif operation == "prepare_new":
-            #hlev.ClickTopMenuAndContinue("File", "New")
-            try:
-                from PySide2.QtWidgets import QFileDialog
-
-                if hasattr(context, "entity_locations") and len(context.entity_locations):
-                    start_path = context.entity_locations[0]
-                    footage_path = os.path.join(start_path, "Footage")
-                    if os.path.exists(footage_path):
-                        start_path = footage_path
-                else:
-                    start_path = context.sgtk.project_path
-
-                new_file = QFileDialog.getOpenFileName(engine.ui, "Select Image File", start_path)
-                
-                if new_file[0]:
-                    hlev.NewSceneAndShot(new_file[0])
-                    hlev.ClickTopMenuAndContinue("Shot", "Edit Shot")
-            except Exception as e:
-                self.logger.error("Could not open the selected image file.\n%s", e)

@@ -11,10 +11,13 @@
 import os
 import sgtk
 import shutil
+import time
 
 from pathlib import Path
 
 from engine import SynthEyesEngine
+from helper_functions import StoppableThread
+import SyPy3
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -385,26 +388,45 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
                 if hook and hasattr(hook, "prepare"):
                     hook.prepare(engine, settings, item)
 
-        ### 5. actual export
+        ### 5. prompt the user to close popups, should any be open at this point
+        engine.prompt_to_close_popup()
+
+        ### 6. actual export
+        msg = "Exporting '{}' to '{}'".format(export_type, item.properties["path"])
         if hook and hasattr(hook, "export"):
+            self.logger.info(msg)
             hook.export(engine, settings, item)
         else:
+            # open stoppable thread to suprress warnings/infos after export
+            thread = SuppressWarningsThread(engine)
+            thread.start()
+            self.logger.debug("Started suppress warnings thread")
+            
+            # call SynthEyes' actual export function
+            self.logger.info(msg)
             hlev.Export(export_type, item.properties["path"])
 
-        ### 6. restore user's export config file
+            # all warnings should already be closed at this point as the warnings themselves are part of the export function
+            # stop & join the thread
+            thread.stop()
+            self.logger.debug("Stopped suppress warnings thread")
+            thread.join()
+            self.logger.debug("Joined suppress warnings thread")
+
+        ### 7. restore user's export config file
         os.remove(sticky)
         if user_sticky:
             os.rename(sticky_backup, sticky)
 
-        ### 7. undo any changes made during the export
+        ### 8. undo any changes made during the export
         while hlev.UndoCount():
             hlev.Undo()
 
-        ### 8. execute hook's cleanup function
+        ### 9. execute hook's cleanup function
         if hook and hasattr(hook, "cleanup"):
             hook.cleanup(engine, settings, item)
 
-        # reset anim start & end as these are unaffected by the undo system
+        ### 10. reset anim start & end as these are unaffected by the undo system
         hlev.SetAnimStart(anim_start)
         hlev.SetAnimEnd(anim_end)
 
@@ -453,3 +475,19 @@ def _get_save_action():
             "callback": callback
         }
     }
+
+class SuppressWarningsThread(StoppableThread):
+    def __init__(self, engine, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._hlev = SyPy3.SyLevel()
+        self._connected = self._hlev.OpenExisting(engine._port, engine._pin)
+      
+    def run(self):
+        if not self._connected:
+            return
+        
+        while not self.stopped():
+            if self._hlev.Popup().IsValid():
+                self._hlev.Popup().CloseAndWait()
+            time.sleep(0.016)

@@ -19,28 +19,27 @@ def prepare(engine, settings, item):
         for list in (hlev.Meshes(), hlev.Lights(), hlev.Trackers()):
             obj: SyObj
             for obj in list:
-                obj.Set("isExported", False)
+                obj.isExported = False
 
         # disable export for all objects except the one corresponding to this item 
         item_unique_id = item.get_property("unique_id")
         
         # Even though an object is not to be exported, usda still generates a root node for said object.
-        # Therefore, use delete here as well. Take note that the active object must not be deleted. Thus, the current item's camera 
-        # has to be made the active object before deleting the current one.
-        active_obj = hlev.Active()
-        cam = None
+        # Therefore, delete it instead. Take note that deleting any object does not correct the active object, which is stored as an index.
+        # Thus, deleting objects may cause SynthEyes to crash due an index-out-of-bounds error. While there are still objects to be deleted,
+        # keep the first object in the list active and only once object deletion is completed set the correct active object.
+        hlev.SetActive(hlev.Objects()[0])
         obj: SyObj
         for obj in hlev.Objects():
-            if obj.uniqueID == item_unique_id:
-                cam = obj
-                hlev.SetActive(cam)
-                active_obj = cam
-            elif obj is not active_obj:
+            if obj.uniqueID != item_unique_id:
                 hlev.Delete(obj)
-
-        if cam is not active_obj:
-            hlev.Delete(active_obj)
         
+        # make the camera corresponding to this item the active object
+        for cam in hlev.Cameras():
+            if cam.uniqueID == item_unique_id:
+                hlev.SetActive(cam)
+                break
+
     except Exception as e: raise e
     finally: hlev.Accept("Prepare Export")
         

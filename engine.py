@@ -457,14 +457,9 @@ class SynthEyesEngine(Engine):
 
     def check_connection(self):
         """Check the connection status of SynthEyes."""
-        #if getattr(self, "hlev", None) and self.hlev.core:
-        #    return self.hlev.core.OK()
         hlev = SyPy3.SyLevel()
         if hlev.OpenExisting(self._port, self._pin):
-            r = hlev.core.OK()
-            #print(r)
-            return r
-        #print(False)
+            return hlev.core.OK()
         return False
 
     @property
@@ -541,3 +536,18 @@ class SynthEyesEngine(Engine):
     
     def get_syntheyes_hwnd(self):
         return int(self._hlev.Main().HWND(), 16)
+    
+    def prompt_to_close_popup(self):
+        from sgtk.platform.qt import QtCore, QtGui
+        
+        # check if a popup that might interfere with the reset is still open and ask the user to close it first
+        hlev = self.get_syntheyes_connection()
+        while hlev.Popup().IsValid():
+            try:
+                QtGui.QApplication.setOverrideCursor(QtCore.Qt.ArrowCursor)
+                QtGui.QMessageBox.critical(
+                    self.ui,
+                    "Popup detected",
+                    "A popup is currently open in SynthEyes, which might interfere with the scene reset. Close the popup first and then hit OK.")
+            finally:
+                QtGui.QApplication.restoreOverrideCursor()

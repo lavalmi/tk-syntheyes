@@ -119,16 +119,6 @@ class PlayblastInbuiltApp(InbuiltApp):
             img_proc = hlev.Popup()
             img_proc.ByID(1400).SetOption(prepset_name) # prepset dropdown; will be reverted via the undo later
 
-            # # delete prepset
-            # thread = Thread(target=lambda popup: popup.ByID(1400).SetOptionNo(0), args=(img_proc)) # prepset dropdown > Delete
-            # thread.start()
-            # # wait for the additional dialogs to close
-            # popup = hlev.Popup()
-            # while popup.hwnd != img_proc.hwnd:
-            #     popup.ByID(6).ClickAndContinue() # Yes; This button has to be clicked twice for some reason
-            #     popup = hlev.Popup()
-            # thread.join()
-
             img_proc.ByID(1).ClickAndWait() # OK
 
             # 4. hide all other cameras and clear the selection to prevent them from showing up in the playblast

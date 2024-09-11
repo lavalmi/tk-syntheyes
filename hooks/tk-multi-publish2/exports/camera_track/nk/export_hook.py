@@ -23,7 +23,10 @@ def prepare(engine, settings, item):
         item_unique_id = item.get_property("unique_id")
         obj: SyObj
         for obj in hlev.Objects():
-            obj.isExported = obj.uniqueID == item_unique_id
+            is_item = obj.uniqueID == item_unique_id
+            obj.isExported = is_item
+            if is_item:
+                hlev.SetActive(obj)
         
         for tracker in hlev.Trackers():
             if tracker.obj.uniqueID != item_unique_id:

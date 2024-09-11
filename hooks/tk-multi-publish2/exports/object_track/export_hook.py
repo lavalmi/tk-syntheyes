@@ -1,3 +1,5 @@
+import os
+
 import SyPy3
 from SyPy3.sylevel import SyLevel
 from SyPy3.syobj import SyObj
@@ -21,8 +23,14 @@ def prepare(engine, settings, item):
 
         item_unique_id = item.get_property("unique_id")
 
+        # make the camera corresponding to this item the active object
+        for obj in hlev.Objects():
+            if obj.uniqueID == item_unique_id:
+                hlev.SetActive(obj.cam)
+                break
+
         for mesh in hlev.Meshes():
-            if not mesh.obj or mesh.obj.uniqueID != item_unique_id or mesh.file[-4:].lower() == ".xyz":
+            if not mesh.obj or mesh.obj.uniqueID != item_unique_id or os.path.splitext(mesh.file)[1].lower() == ".xyz":
                 mesh.Set("isExported", False)
 
     except Exception as e: raise e

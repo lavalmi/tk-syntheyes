@@ -18,9 +18,11 @@ def prepare(engine, settings, item):
         for list in (hlev.Meshes(), hlev.Lights()):
             obj: SyObj
             for obj in list:
-                obj.Set("isExported", False)
+                obj.isExported = False
 
         item_unique_id = item.get_property("unique_id")
+
+        hlev.SetActive(hlev.Objects()[0])
 
         # create new object to hold the trackers for the export
         mob = hlev.CreateNew("OBJ")
@@ -35,15 +37,15 @@ def prepare(engine, settings, item):
                 tracker: SyObj
                 for tracker in obj.Trackers():
                     tracker.obj = mob
-                obj.Set("isExported", False)
+                obj.isExported = False
             else:
                 delete.append(obj)
 
         for cam in hlev.Cameras():
             if cam.uniqueID == item_unique_id:
-                hlev.SetActive(cam)
                 for obj in delete:
                     hlev.Delete(obj)
+                hlev.SetActive(cam)
                 break
 
     except Exception as e: raise e

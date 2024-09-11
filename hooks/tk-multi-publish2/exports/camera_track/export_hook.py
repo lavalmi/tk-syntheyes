@@ -32,6 +32,7 @@ def prepare(engine, settings, item):
                 obj.isExported = False
 
                 if obj.uniqueID == item_unique_id:
+                    hlev.SetActive(obj)
                     tracker: SyObj
                     for tracker in obj.Trackers():
                         tracker.obj = mob

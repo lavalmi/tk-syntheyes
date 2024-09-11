@@ -57,7 +57,7 @@ class BreakdownSceneOperations(HookBaseClass):
             file = obj.Get("file")
             if not file:
                 continue
-            file: str = os.path.normpath(file)
+            file = os.path.normpath(file)
             items.append({"node": str(obj.Name()), "type": str(obj.Type()), "path": str(file)})
 
         return items
@@ -81,7 +81,7 @@ class BreakdownSceneOperations(HookBaseClass):
         for i in items:
             node_name = i["node"]
             node_type = i["type"]
-            new_path = i["path"]#.replace(os.path.sep, "/")
+            new_path = i["path"]
 
             if node_type in node_type_list:
                 engine.log_debug(

@@ -21,6 +21,12 @@ def prepare(engine, settings, item):
                 obj.Set("isExported", False)
 
         item_unique_id = item.get_property("unique_id")
+        
+        # make the camera corresponding to this item the active object
+        for cam in hlev.Cameras():
+            if obj.uniqueID == item_unique_id:
+                hlev.SetActive(cam)
+                break
 
         tracker: SyObj
         for tracker in obj.Trackers():

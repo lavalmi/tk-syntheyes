@@ -19,13 +19,16 @@ def prepare(engine, settings, item):
         for list in (hlev.Meshes(), hlev.Trackers(), hlev.Lights()):
             obj: SyObj
             for obj in list:
-                obj.Set("isExported", False)
+                obj.isExported = False
 
         # disable export for all cameras except the one corresponding to this item 
         item_unique_id = item.get_property("unique_id")
         obj: SyObj
         for obj in hlev.Objects():
-            obj.Set("isExported", obj.uniqueID == item_unique_id)
+            is_item = obj.uniqueID == item_unique_id
+            obj.isExported = is_item
+            if is_item:
+                hlev.SetActive(obj)
         
     except Exception as e: raise e
     finally: hlev.Accept("Prepare Export")

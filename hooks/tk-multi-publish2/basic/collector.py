@@ -239,7 +239,7 @@ class SyntheyesSessionCollector(HookBaseClass):
         for mesh in hlev.Meshes():
             if not mesh.Get("obj") and mesh.Get("isExported"):
                 file = mesh.Get("file")
-                if not file or len(file) < 4 or file[-4:].lower() != ".xyz":
+                if not file or os.path.splitext(file)[1].lower() != ".xyz":
                     # get the icon path to display for this item
                     icon_path = os.path.join(self.disk_location, os.pardir, "icons", "geometry.png")
                     geometry_item = parent_item.create_item("syntheyes.geometry", "Geometry", "Scene Geometry")
