@@ -22,7 +22,7 @@ def prepare(engine, settings, item):
                 obj.isExported = False
 
         for mesh in hlev.Meshes():
-            if mesh.obj or os.path.splitext(mesh.file)[1].lower() == ".xyz":
+            if mesh.obj:
                 mesh.isExported = False
 
     except Exception as e: raise e

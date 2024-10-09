@@ -6,10 +6,10 @@ s which 3300
 s wantZup 3000
 d normals 1
 d scaling 1
-d fixAD 1
-d doQuad 1
+d fixAD 0
+d doQuad 0
 d markers 1
-d trksiz 0
+d trksiz 1
 d doScreen 0
 s usePreprocessor 3100
 s uvScreenMode 3000

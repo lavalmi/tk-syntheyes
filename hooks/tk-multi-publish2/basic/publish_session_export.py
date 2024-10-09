@@ -401,6 +401,14 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
             thread = SuppressWarningsThread(engine)
             thread.start()
             self.logger.debug("Started suppress warnings thread")
+
+            # universally deactivate LiDAR-scans before exporting
+            hlev.Begin()
+            try:
+                for mesh in hlev.Meshes():
+                    if os.path.splitext(mesh.file)[1].lower() == ".xyz":
+                        mesh.isExported = False
+            finally: hlev.Accept("Disable LiDAR")
             
             # call SynthEyes' actual export function
             self.logger.info(msg)

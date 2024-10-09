@@ -91,7 +91,9 @@ class SceneOperation(HookClass):
 
         elif operation == "reset":
             # Ask the user to close popups. Otherwise SynthEyes might crash.
-            engine.prompt_to_close_popup()
+            if engine.check_for_popups():
+                return False
+            
             hlev.ClearChanged()
             hlev.PerformActionByIDAndContinue(40610) # File > Close
             return True

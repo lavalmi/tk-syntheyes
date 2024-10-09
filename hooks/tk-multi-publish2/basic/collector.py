@@ -266,7 +266,7 @@ class SyntheyesSessionCollector(HookBaseClass):
         for shot in hlev.Shots():          
             # alternatively use: shot.live.lensHasDistortion -> always outputs True for fisheye lenses
             # lensAtDefaults reflects whether changes were made to the default values of all lenses.
-            if not shot.live.lensAtDefaults:
+            if not shot.live.lensAtDefaults and not shot.live.isImageMap:
                 scene_item = self.get_or_create_item_parent(shot.cam.Name(), parent_icon_path, parent_item)
                 dist_item = scene_item.create_item("syntheyes.distortion_maps", "Distortion Maps", shot.cam.Name())
                 dist_item.set_icon_from_path(icon_path)
@@ -294,7 +294,7 @@ class SyntheyesSessionCollector(HookBaseClass):
             # alternatively use: shot.live.lensHasDistortion -> always outputs True for fisheye lenses
             # lensAtDefaults reflects whether changes were made to the default values of all lenses.
             shot = cam.shot
-            if not shot.live.lensAtDefaults:
+            if not shot.live.lensAtDefaults or shot.live.isImageMap:
                 scene_item = self.get_or_create_item_parent(cam.Name(), parent_icon_path, parent_item)
                 plate_item = scene_item.create_item("syntheyes.undistorted_plate", "Undistorted Plate", cam.Name())
                 plate_item.set_icon_from_path(icon_path)

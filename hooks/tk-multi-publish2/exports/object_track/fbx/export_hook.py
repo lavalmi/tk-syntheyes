@@ -30,7 +30,7 @@ def prepare(engine, settings, item):
                 break
 
         for mesh in hlev.Meshes():
-            if not mesh.obj or mesh.obj.uniqueID != item_unique_id or os.path.splitext(mesh.file)[1].lower() == ".xyz":
+            if not mesh.obj or mesh.obj.uniqueID != item_unique_id:
                 mesh.isExported = False
 
         for tracker in hlev.Trackers():

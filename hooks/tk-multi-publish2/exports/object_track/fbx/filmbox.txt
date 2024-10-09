@@ -6,7 +6,7 @@ s fbxyear 46425832303139303000
 s units 636d00
 d scaling 1
 s fbxRotOrder 3100
-d fixAD 1
+d fixAD 0
 d exportTrackers 1
 s marker 43686973656c00
 d trksiz 0.002
@@ -14,14 +14,14 @@ d relfar 0
 s fov 486f72697a6f6e74616c20464f5600
 s camhack 3000
 d doScreen 0
-d fixScreen 1
+d fixScreen 0
 s usePreprocessor 3100
 s uvScreenMode 3000
 s lmode 3000
 d vgrid 12
 d useOriginals 1
 d makeVertUniq 0
-d doQuad 1
+d doQuad 0
 d doAlphaTrans 0
 s pcmode 3000
 s flat 3100

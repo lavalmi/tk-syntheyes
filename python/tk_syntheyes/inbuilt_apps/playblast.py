@@ -42,36 +42,37 @@ class PlayblastInbuiltApp(InbuiltApp):
 
     def playblast(self):
         hlev = self.engine.get_syntheyes_connection()
+        ui = self.engine.ui
 
         if "tk-multi-publish2" not in self.engine.apps:
-            QMessageBox(
-                QMessageBox.Icon.Critical,
+            ui.message_box(
+                QMessageBox.Critical,
                 "Missing App",
                 "The tk-multi-publish2 app is required to resolve the path for the playblast, "
                 "yet it is currently unavailable.",
                 QMessageBox.Abort,
-                flags=Qt.WindowStaysOnTopHint
-            ).exec_()
+                ui
+            )
             return
 
-        if hlev.Popup().Class():
-            QMessageBox(
-                QMessageBox.Icon.Critical,
+        if hlev.Popup().IsValid():
+            ui.message_box(
+                QMessageBox.Critical,
                 "Open Popup",
                 "A popup is currently open. Close it first, before starting the playblast.",
                 QMessageBox.Abort,
-                flags=Qt.WindowStaysOnTopHint
-            ).exec_()
+                ui
+            )
             return
 
         if hlev.HasChanged():
-            save = QMessageBox(
-                QMessageBox.Icon.Warning,
+            save = ui.message_box(
+                QMessageBox.Warning,
                 "Unsaved Changes",
                 "The current scene has unsaved changes. Do you want to save the scene before continueing?",
                 QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
-                flags=Qt.WindowStaysOnTopHint
-            ).exec_()
+                ui
+            )
             if save == QMessageBox.Yes:
                 self.engine.save_session()
             elif save == QMessageBox.Cancel:
@@ -169,7 +170,7 @@ class PlayblastInbuiltApp(InbuiltApp):
             if path.rsplit(".", 1)[1].lower() == "jpg":
                 popup.ByID(1340).ClickAndContinue() # Compression Settings
                 timer.reset()
-                while hlev.Popup().Name() == popup.Name():
+                while hlev.Popup().hwnd == popup.hwnd:
                     timer.sleep("Error: Timeout while waiting for compression settings window to open.")
                 # Compression settings popup
                 comp = hlev.Popup()
@@ -190,7 +191,7 @@ class PlayblastInbuiltApp(InbuiltApp):
             popup.ByID(2353).SetSpnValue(180) # Shutter Angle
             popup.ByID(2354).SetSpnValue(-90) # Phase
 
-            popup.ByID(1).ClickAndContinue() # Start
+            popup.ByID(1).ClickAndWait() # Start
             hlev.Unlock()
             
             while popup.IsValid():
@@ -202,13 +203,13 @@ class PlayblastInbuiltApp(InbuiltApp):
         except Exception as e:
             err_msg = "Error during Playblast: {}".format(e)
             self.engine.log_error(err_msg)
-            QMessageBox(
-                QMessageBox.Icon.Critical,
+            ui.message_box(
+                QMessageBox.Critical,
                 "Failure",
                 err_msg,
                 QMessageBox.Abort,
-                flags=Qt.WindowStaysOnTopHint
-            ).exec_()
+                self.engine.ui
+            )
             return
         finally: 
             if reached_first_undo:
@@ -217,13 +218,13 @@ class PlayblastInbuiltApp(InbuiltApp):
                 hlev.SetAnimStart(anim_start)
                 hlev.SetAnimEnd(anim_end)
 
-        QMessageBox(
-            QMessageBox.Icon.Information,
+        ui.message_box(
+            QMessageBox.Information,
             "Success",
             "The Playblast was successfully rendered and is now available for publishing.",
             QMessageBox.Ok,
-            flags=Qt.WindowStaysOnTopHint
-        ).exec_()
+            self.engine.ui
+        )
 
     
     def _undo_playblast_changes(self, first_undo):

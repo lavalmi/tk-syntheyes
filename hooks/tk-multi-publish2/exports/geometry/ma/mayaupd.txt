@@ -4,7 +4,7 @@ s synunits 636d00
 s mayaunits 636d00
 d arnold 0
 d arnoldRoll 0
-s rotOrder 5a585900
+s rotOrder 58595a00
 s doScreen 3000
 s usePreprocessor 3100
 s uvScreenMode 3000
@@ -14,7 +14,7 @@ d overscanride 0
 d roundingError 0.001
 s renderTrackers 2d3100
 d trackerSize 0.001
-s embedMeshes 3100
+s embedMeshes 3200
 s from_prefix 00
 s to_prefix 00
 d far_clip 10

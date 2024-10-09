@@ -311,7 +311,9 @@ class SyntheyesUndistortedPlatePublishPlugin(HookBaseClass):
         # 6. start save sequence
         popup.ByID(1).ClickAndContinue() # Start
         while popup.IsValid():
-            if popup.hwnd != hlev.Popup().hwnd:
+            # NOTE: Check again if the sequence popup is still valid after the first condition is met to tackle potential race condition between this and SynthEyes, 
+            # resulting in a raised exception despite no error dialog being encountered.
+            if popup.hwnd != hlev.Popup().hwnd and popup.IsValid():
                 # close error dialog
                 error_dialog = hlev.Popup()
                 error_msg = "{}\n{}\n{}".format(error_dialog.ByID(65535).Name(), shot.renderFile, shot.renderCompression) # text message

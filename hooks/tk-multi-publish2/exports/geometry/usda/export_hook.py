@@ -17,21 +17,20 @@ def prepare(engine, settings, item):
         
     hlev.Begin()
     try:
-        for list in (hlev.Cameras(), hlev.Lights()):
-            for obj in list:
-                obj.Set("isExported", False)
+        hlev.SetActive(hlev.Objects()[0])
 
-        item_unique_id = item.get_property("unique_id")
-
-        # make the camera corresponding to this item the active object
+        # Delete all objects to avoid SnythEyes still exporting an empty group node for non-exportable moving objects
         for obj in hlev.Objects():
-            if obj.uniqueID == item_unique_id:
-                hlev.SetActive(obj.cam)
-                break
+            if not obj.isCamera:
+                hlev.Delete(obj)
+
+        for list in (hlev.Objects(), hlev.Lights(), hlev.Trackers()):
+            for obj in list:
+                obj.isExported = False
 
         for mesh in hlev.Meshes():
-            if not mesh.obj or mesh.obj.uniqueID != item_unique_id:
-                mesh.Set("isExported", False)
+            if mesh.obj:
+                mesh.isExported = False
 
     except Exception as e: raise e
     finally: hlev.Accept("Prepare Export")

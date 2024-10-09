@@ -1,11 +1,11 @@
 s workArea 3200
 d userStart 0
 s units 636d00
-d buildRigs 1
-d fixAD 1
-d doScreen 1
+d buildRigs 0
+d fixAD 0
+d doScreen 0
 s usePreprocessor 3100
-s uvScreenMode 3100
+s uvScreenMode 3000
 d nomgrid 64
 d relScreenDis 3
 s rotOrder 3100

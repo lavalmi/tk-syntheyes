@@ -248,10 +248,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     else:
                         cmds.append(cmd)
                 
-
-        #for (cmd_name, cmd_details) in self._inbuilt_cmds.items():
-        #    cmds.append(AppCommand(cmd_name, cmd_details))
-
         # Sort list of commands in name order
         cmds.sort(key=lambda x: x.name) #TODO incorrect sorting at times
 
@@ -405,8 +401,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._dev_panel: BasePanel = self._init_panel(BasePanel, "DEV", self._main_panel)
         self._link_panel(self._main_panel.insert_menu_button(self._dev_panel), self._dev_panel)
         
-        #self._dev_panel.insert_button(text="Test Export", callback=lambda: export_test(self._engine))
-
 
     def closeEvent(self, event):
         """Window behaviour on close."""
@@ -558,8 +552,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                         self._anim_window_geom.start()
 
 
-    def _update_stays_on_top(self):
-        self.setWindowFlag(Qt.WindowStaysOnTopHint, self._stays_on_top())
+    def _update_stays_on_top(self, override = None):
+        self.setWindowFlag(Qt.WindowStaysOnTopHint, self._stays_on_top() if override is None else override)
         if self._update_flags:
             self.show()
 
@@ -569,6 +563,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self._update_flags:
             self.show()
 
+    
+    def to_front(self, all_windows=True):
+        if all_windows:
+            for window in QApplication.allWindows():
+                window.raise_()
+                window.activateWindow()
+        else:
+            self.activateWindow()
+            
   
     def open_logging_console(self):
         app = QCoreApplication.instance()
@@ -584,6 +587,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self._engine:
             self._engine.exit()
         os._exit(0)
+
+### Dialog #####################################################################
+
+    def message_box(self, icon, title, text, buttons=QMessageBox.Ok, parent=None, flags=Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint | Qt.WindowStaysOnTopHint):
+        
+        msg_box = QMessageBox(icon, title, text, buttons, parent, flags)
+        msg_box.show()
+        
+        screen = QGuiApplication.screenAt(QCursor().pos())
+        fg = msg_box.frameGeometry()
+        fg.moveCenter(screen.geometry().center())
+        msg_box.move(fg.topLeft())
+     
+        return msg_box.exec_()
 
 ### Config #####################################################################
     
