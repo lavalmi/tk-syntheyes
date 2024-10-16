@@ -10,28 +10,26 @@
 
 import os
 import sgtk
+import shutil
 
-from tank_vendor import six
+from pathlib import Path
 
-import SyPy3
 from engine import SynthEyesEngine
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
 
-class SyntheyesCameraPublishPlugin(HookBaseClass):
+class SyntheyesPlayblastPublishPlugin(HookBaseClass):
     """
-    Plugin for publishing an open maya session.
+    Plugin for publishing various sequence/movie playblasts from the current SynthEyes session.
 
     This hook relies on functionality found in the base file publisher hook in
     the publish2 app and should inherit from it in the configuration. The hook
     setting for this plugin should look something like this::
 
-        hook: "{self}/publish_file.py:{engine}/tk-multi-publish2/basic/publish_session.py"
+        hook: "{self}/publish_file.py:{engine}/tk-multi-publish2/basic/publish_playblast.py"
 
     """
-
-    # NOTE: The plugin icon and name are defined by the base file plugin.
 
     @property
     def description(self):
@@ -41,10 +39,9 @@ class SyntheyesCameraPublishPlugin(HookBaseClass):
         """
 
         return """
-        <p>This plugin publishes session geometry for the current session. Any
-        session geometry will be exported to the path defined by this plugin's
-        configured "Publish Template" setting. The plugin will fail to validate
-        if the "AbcExport" plugin is not enabled or cannot be found.</p>
+        <p>This plugin publishes playblasts from the current session. The output
+        will be saved to the path defined by this plugin's configured 
+        "publish_template" setting.</p>
         """
 
     @property
@@ -67,16 +64,16 @@ class SyntheyesCameraPublishPlugin(HookBaseClass):
         part of its environment configuration.
         """
         # inherit the settings from the base publish plugin
-        base_settings = super(SyntheyesCameraPublishPlugin, self).settings or {}
+        base_settings = super(SyntheyesPlayblastPublishPlugin, self).settings or {}
 
         # settings specific to this class
         syntheyes_publish_settings = {
-            "Publish Template": {
+            "publish_template": {
                 "type": "template",
                 "default": None,
                 "description": "Template path for published work files. Should"
-                "correspond to a template defined in "
-                "templates.yml.",
+                               "correspond to a template defined in "
+                               "templates.yml.",
             }
         }
 
@@ -94,7 +91,21 @@ class SyntheyesCameraPublishPlugin(HookBaseClass):
         accept() method. Strings can contain glob patters such as *, for example
         ["maya.*", "file.maya"]
         """
-        return ["syntheyes.session.camera"]
+        return ["syntheyes.playblast"]
+
+    @property
+    def item_property_cache(self):
+        """
+        Backup of each valid item's properties. Since, in this case, mutliple
+        plugins may work on the same item with varying publish paths, it cannot 
+        be guaranteed that the properties of the item will remain the same as 
+        they were at the time of validation.
+        Therefore, the state of the item's properties is cached here and re-set
+        before publishing.
+        """
+        if not hasattr(self, "_item_property_cache"):
+            self._item_property_cache = {}
+        return self._item_property_cache
 
     def accept(self, settings, item):
         """
@@ -121,17 +132,17 @@ class SyntheyesCameraPublishPlugin(HookBaseClass):
 
         :returns: dictionary with boolean keys accepted, required and enabled
         """
-
         accepted = True
         publisher = self.parent
-        template_name = settings["Publish Template"].value
+        engine = publisher.engine
+        template_name = settings["publish_template"].value
 
         # ensure a work file template is available on the parent item
         work_template = item.parent.properties.get("work_template")
         if not work_template:
             self.logger.debug(
                 "A work template is required for the session item in order to "
-                "publish session geometry. Not accepting session geom item."
+                "publish session. Not accepting the item."
             )
             accepted = False
 
@@ -140,20 +151,25 @@ class SyntheyesCameraPublishPlugin(HookBaseClass):
         if not publish_template:
             self.logger.debug(
                 "The valid publish template could not be determined for the "
-                "session geometry item. Not accepting the item."
+                "session item. Not accepting the item."
             )
             accepted = False
 
-        # we've validated the publish template. add it to the item properties
-        # for use in subsequent methods
-        item.properties["publish_template"] = publish_template
+        if accepted:
+            # we've validated the publish template. add it to the item properties
+            # for use in subsequent methods
+            #item.properties["publish_template"] = publish_template
 
-        # because a publish template is configured, disable context change. This
-        # is a temporary measure until the publisher handles context switching
-        # natively.
-        item.context_change_allowed = False
+            # because a publish template is configured, disable context change. This
+            # is a temporary measure until the publisher handles context switching
+            # natively.
+            item.context_change_allowed = False
 
-        return {"accepted": accepted, "checked": True}
+        return {
+            "accepted": accepted,
+            "checked": accepted,
+            "enabled": True
+        }
 
     def validate(self, settings, item):
         """
@@ -166,39 +182,45 @@ class SyntheyesCameraPublishPlugin(HookBaseClass):
         :param item: Item to process
         :returns: True if item is valid, False otherwise.
         """
-
         publisher = self.parent
         engine: SynthEyesEngine = publisher.engine
-        #TODO implement proper exception checking in case the syntheyes connection breaks off
-        hlev = engine._hlev
+        hlev = engine.get_syntheyes_connection()
+               
+        # ---- ensure the session has been saved
         
-        if hlev.HasChanged():
-            error_msg = "The SynthEyes session has not been saved before publish."
-            self.logger.error(error_msg)
-            raise Exception(error_msg)
-        
-        path = hlev.SNIFileName()
-
         # get the normalized path
-        path = sgtk.util.ShotgunPath.normalize(path)
+        path = sgtk.util.ShotgunPath.normalize(hlev.SNIFileName())
+        if not path or hlev.HasChanged():
+            # the session still requires saving. provide a save button.
+            # validation fails.
+            error_msg = "The SynthEyes session has not been saved."
+            self.logger.error(error_msg, extra=_get_save_as_action())
+            raise Exception(error_msg)
+
+        item.properties["publish_type"] = "SynthEyes Playblast Sequence"
+        template_name = settings["publish_template"].value
+        publish_template = publisher.get_template_by_name(template_name)
+        item.properties["publish_template"] = publish_template
 
         # get the configured work file template
         work_template = item.parent.properties.get("work_template")
-        publish_template = item.properties.get("publish_template")
 
-        # get the current scene path and extract fields from it using the work
-        # template:
+        # get the current scene path and extract fields from it using the work template:
         work_fields = work_template.get_fields(path)
+        # set the export_name and export_extension for syntheyes required to resolve the publish path
+        work_fields["syntheyes.export_name"] = item.name.replace(" ", "_")
 
-        # ensure the fields work for the publish template
-        missing_keys = publish_template.missing_keys(work_fields)
-        if missing_keys:
-            error_msg = (
-                "Work file '%s' missing keys required for the "
-                "publish template: %s" % (path, missing_keys)
-            )
-            self.logger.error(error_msg)
-            raise Exception(error_msg)
+        if settings["type_spec"].value == "sequence":
+            cam_found = False
+            unique_id = item.properties["unique_id"]
+            for cam in hlev.Cameras():
+                if cam.uniqueID == unique_id:
+                    shot = cam.shot
+                    work_fields["SEQ"] = shot.start + shot.frameMatchOffset
+                    cam_found = True
+                    break    
+            if not cam_found:
+                return False
 
         # create the publish path by applying the fields. store it in the item's
         # properties. This is the path we'll create and then publish in the base
@@ -211,7 +233,10 @@ class SyntheyesCameraPublishPlugin(HookBaseClass):
             item.properties["publish_version"] = work_fields["version"]
 
         # run the base class validation
-        return super(SyntheyesCameraPublishPlugin, self).validate(settings, item)
+        if super(SyntheyesPlayblastPublishPlugin, self).validate(settings, item):
+            self.item_property_cache[id(item)] = dict(item.properties)
+            return True
+        return False
 
     def publish(self, settings, item):
         """
@@ -223,7 +248,11 @@ class SyntheyesCameraPublishPlugin(HookBaseClass):
         :param item: Item to process
         """
 
+        item.properties.clear()
+        item.properties.update(self.item_property_cache[id(item)])
+
         publisher = self.parent
+        engine = publisher.engine
 
         # get the path to create and publish
         publish_path = item.properties["path"]
@@ -232,13 +261,29 @@ class SyntheyesCameraPublishPlugin(HookBaseClass):
         publish_folder = os.path.dirname(publish_path)
         self.parent.ensure_folder_exists(publish_folder)
 
-        # ...and execute it:
-        #try:
-        #    self.parent.log_debug("Executing command: %s" % abc_export_cmd)
-        #    mel.eval(abc_export_cmd)
-        #except Exception as e:
-        #    self.logger.error("Failed to export Geometry: %s" % e)
-        #    return
-
         # Now that the path has been generated, hand it off to the
-        super(SyntheyesCameraPublishPlugin, self).publish(settings, item)
+        super(SyntheyesPlayblastPublishPlugin, self).publish(settings, item)
+
+def _get_save_as_action():
+    """
+    Simple helper for returning a log action dict for saving the session
+    """
+
+    engine = sgtk.platform.current_engine()
+
+    # default save callback
+    callback = engine.save_session_as
+
+    # if workfiles2 is configured, use that for file save
+    if "tk-multi-workfiles2" in engine.apps:
+        app = engine.apps["tk-multi-workfiles2"]
+        if hasattr(app, "show_file_save_dlg"):
+            callback = app.show_file_save_dlg
+
+    return {
+        "action_button": {
+            "label": "Save As...",
+            "tooltip": "Save the current session",
+            "callback": callback,
+        }
+    }

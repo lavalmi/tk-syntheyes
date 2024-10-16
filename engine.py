@@ -26,10 +26,8 @@ import logging
 from sgtk.platform import Engine
 
 import SyPy3
-import builtins
 
 sys.path.append(os.path.dirname(__file__))
-from helper_functions import strtobool
 
 # Although the engine has logging already, this logger is needed for callback based logging
 # where an engine may not be present.
@@ -131,22 +129,21 @@ class SynthEyesEngine(Engine):
             raise sgtk.TankError("SynthEyes port:%d and pin:%s are not valid.", self._port, self._pin)
         
         self._hlev: SyPy3.sylevel.SyLevel = SyPy3.SyLevel()
-        if not strtobool(getattr(builtins, "DEBUG", None)):
-            if not self._hlev.OpenExisting(self._port, self._pin):
-                raise sgtk.TankError("Could not open existing instance of SynthEyes with port:%s and pin:%s.", self._port, self._pin)
+        if not self._hlev.OpenExisting(self._port, self._pin):
+            raise sgtk.TankError("Could not open existing instance of SynthEyes with port:%s and pin:%s.", self._port, self._pin)
 
-            syntheyes_ver = self._hlev.Version()
-            if syntheyes_ver in {
-                "2023.10.1057",
-            }:
-                self.logger.debug("Running SynthEyes version %s", syntheyes_ver)
-            else:
-                msg = (
-                    "The Flow Production Tracking has not yet been fully tested with SynthEyes %s.  "
-                    "You can continue to use Toolkit but you may experience bugs or instability."
-                )
-                # always log the warning to the script editor:
-                self.logger.warning(msg)
+        syntheyes_ver = self._hlev.Version()
+        if syntheyes_ver in {
+            "2023.10.1057",
+        }:
+            self.logger.debug("Running SynthEyes version %s", syntheyes_ver)
+        else:
+            msg = (
+                "The Flow Production Tracking has not yet been fully tested with SynthEyes %s.  "
+                "You can continue to use Toolkit but you may experience bugs or instability."
+            )
+            # always log the warning to the script editor:
+            self.logger.warning(msg)
 
         # Set the SynthEyes project based on config
         #self._set_project()
@@ -460,14 +457,9 @@ class SynthEyesEngine(Engine):
 
     def check_connection(self):
         """Check the connection status of SynthEyes."""
-        #if getattr(self, "hlev", None) and self.hlev.core:
-        #    return self.hlev.core.OK()
         hlev = SyPy3.SyLevel()
         if hlev.OpenExisting(self._port, self._pin):
-            r = hlev.core.OK()
-            #print(r)
-            return r
-        #print(False)
+            return hlev.core.OK()
         return False
 
     @property
@@ -503,19 +495,27 @@ class SynthEyesEngine(Engine):
     ### Functions ###
 
     def exit(self):
-        self._hlev = SyPy3.SyLevel()
-        if self._hlev and self._hlev.OpenExisting(self._port, self._pin):
-            if self._hlev.core and self._hlev.core.OK():
-                self._hlev.ClearChanged()
-                self._hlev.CloseSynthEyes()
+        try:
+            hlev = self.get_syntheyes_connection()
+            hlev.ClearChanged()
+            hlev.CloseSynthEyes()
+        except Exception as e:
+            self.log_error(e)
         
         self._heartbeat.join(True)
 
+    def save_session(self):
+        try:
+            self._hlev.Scene().Call("Save", self._hlev.SNIFileName())
+            self._hlev.ClearChanged()
+        except Exception as e:
+            self.log_error("Could not save current SynthEyes session file.\n%s", e)
 
     def save_session_as(self, path: str):
         try:
             self._hlev.SetSNIFileName(path)
-            self._hlev.SaveIfChanged()
+            self._hlev.Scene().Call("Save", path)
+            self._hlev.ClearChanged()
         except Exception as e:
             self.log_error("Error during saving to %s\n%s", path, e)
 
@@ -536,3 +536,47 @@ class SynthEyesEngine(Engine):
     
     def get_syntheyes_hwnd(self):
         return int(self._hlev.Main().HWND(), 16)
+    
+    def prompt_to_close_popup(self):
+        from sgtk.platform.qt import QtCore, QtGui
+        
+        # check if a popup that might interfere with the reset is still open and ask the user to close it first
+        hlev = self.get_syntheyes_connection()
+        while hlev.Popup().IsValid():
+            try:
+                QtGui.QApplication.setOverrideCursor(QtCore.Qt.ArrowCursor)
+                self.ui.message_box(
+                    QtGui.QMessageBox.Critical,
+                    "Popup detected",
+                    "A popup is currently open in SynthEyes, which might interfere with the scene reset. Close the popup first and then hit OK.",
+                    QtGui.QMessageBox.Ok,
+                    self.ui
+                )
+            finally:
+                QtGui.QApplication.restoreOverrideCursor()
+
+    def check_for_popups(self):
+        """
+        Checks and returns if there are any open popups in SynthEyes. If True, a message box will be displayed.
+        """
+        from sgtk.platform.qt import QtCore, QtGui
+
+        hlev = self.get_syntheyes_connection()
+        popup = hlev.Popup()
+        if popup.IsValid():
+            message = "A popup \"{}\" is still open in SynthEyes. This may cause unexpected behaviour. Please close the popup first and repeat the previous action.".format(popup.Name())
+            self.log_info(message)
+            try:
+                QtGui.QApplication.setOverrideCursor(QtCore.Qt.ArrowCursor)
+                self.ui.message_box(
+                    QtGui.QMessageBox.Critical,
+                    "Popup detected - Action canceled",
+                    message,
+                    QtGui.QMessageBox.Abort,
+                    self.ui
+                )
+            finally:
+                QtGui.QApplication.restoreOverrideCursor()
+                return True
+        
+        return False

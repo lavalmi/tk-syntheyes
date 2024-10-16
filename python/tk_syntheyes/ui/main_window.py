@@ -1,3 +1,4 @@
+import importlib.util
 import os
 import sys
 import time
@@ -13,14 +14,16 @@ sys.path.append(os.path.dirname(__file__))
 from ui_main_window import Ui_MainWindow
 from base_panel import BasePanel
 from tk_syntheyes.app_command import AppCommand
+from tk_syntheyes.inbuilt_app import InbuiltApp
 from engine import SynthEyesEngine
 
 from configparser import SafeConfigParser
 
-
 class MainWindow(QMainWindow, Ui_MainWindow):
+
     def __init__(self, engine: SynthEyesEngine=None, parent=None):
         super(MainWindow, self).__init__(parent)
+
         self.setupUi(self)
 
         self._engine = engine
@@ -159,7 +162,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self._engine.log_debug("%s already exists in parent panel %s", name, parent_panel.name)
                 return None
         
-        panel: QWidget = panel_type(self)
+        panel: panel_type = panel_type(self)
         panel.setVisible(visible)
         panel.setEnabled(enabled)
         panel.name = name
@@ -181,6 +184,38 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         return panel
 
+    @property
+    def inbuilt_apps(self):
+        if not getattr(self, "_inbuilt_apps", None):
+            self._inbuilt_apps = {}
+            inbuilt_apps_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "inbuilt_apps"))
+            if os.path.isdir(inbuilt_apps_path):
+                import importlib
+                import inspect
+                for file in os.listdir(inbuilt_apps_path):
+                    file_path = os.path.join(inbuilt_apps_path, file)
+                    if not os.path.isfile(file_path): continue
+
+                    spec = importlib.util.spec_from_file_location(file.rsplit(".", 1)[0], file_path)
+                    if not spec: continue
+
+                    self._engine.log_debug("Loading inbuilt app: %s", file)
+                    mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)
+                    if not mod: continue
+
+                    # iterate over all classes
+                    for cls_name, cls in inspect.getmembers(mod, inspect.isclass):
+                        if cls != InbuiltApp and issubclass(cls, InbuiltApp):
+                            self._inbuilt_apps[cls_name] = cls(self._engine)
+            
+        return self._inbuilt_apps
+
+
+    def _clear_inbuilt_apps(self):
+        if hasattr(self, "_inbuilt_apps"):
+            del self._inbuilt_apps
+
 
     def _init_commands(self):
         """Iterate over all commands retrieved from the engine and generate menu panels to reflect their respective hierarchy. Buttons are automatically created and linked to either the command or a subpanel."""
@@ -200,8 +235,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             cmds.append(cmd)
         
+        # Add inbuilt apps
+        app: InbuiltApp
+        for app_name, app in self.inbuilt_apps.items():
+            for cmd_name, cmd_details in app.commands.items():
+                cmd = AppCommand(cmd_name, cmd_details)
+                props = getattr(cmd, "properties")
+                if props:
+                    if "environment" in props:
+                        if self._engine.environment["name"] in props["environment"]:
+                            cmds.append(cmd)
+                    else:
+                        cmds.append(cmd)
+                
         # Sort list of commands in name order
-        cmds.sort(key=lambda x: x.name)
+        cmds.sort(key=lambda x: x.name) #TODO incorrect sorting at times
 
         # now go through all of the menu items.
         # separate them out into various sections
@@ -219,7 +267,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             else:
                 # normal menu
                 app_name = cmd.get_app_name()
-                if app_name is None:
+                if not app_name:
                     # un-parented app
                     app_name = "Other Items"
                 if not app_name in cmds_by_app:
@@ -233,9 +281,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Now add all apps to main menu
         for app_name in sorted(cmds_by_app.keys()):
             if len(cmds_by_app[app_name]) > 1:
-                # more than one menu entry fort his app
+                # more than one menu entry for this app
                 # make a sub menu and put all items in the sub menu
-                app_panel = self._init_panel(BasePanel, app_name, self._main_panel)
+                app_panel: BasePanel = self._init_panel(BasePanel, app_name, self._main_panel)
+                self._link_panel(self._main_panel.insert_menu_button(app_panel), app_panel)
 
                 # get the list of menu commands for this app
                 cmds = cmds_by_app[app_name]
@@ -256,7 +305,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
     def _add_command_button(self, command: AppCommand, panel: BasePanel, row=-1):
-        """Add a button to the given panel and linking its clicking action to the corresponding AppCommand retrieved from the engine."""
+        """Add a button to the given panel and link its clicking action to the corresponding AppCommand retrieved from the engine."""
         # create menu sub-tree if need to:
         # Support menu items separated by '/'
         parts = command.name.split("/")
@@ -270,7 +319,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 # create new sub menu
                 sub_panel: BasePanel = self._init_panel(BasePanel, item_label, panel, False, False, False) #TODO Consider whether the sub panels should be added to the quick select or not
                 self._link_panel(panel.insert_menu_button(sub_panel), sub_panel)
-                self._link_panel(sub_panel.make_sub_panel(panel), panel)
                 panel = sub_panel
 
         # Finally create the command button
@@ -316,8 +364,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._main_panel.btn_context = self._main_panel.insert_menu_button(self._context_panel)
         self._main_panel.btn_context.setText(context_name)
         self._link_panel(self._main_panel.btn_context, self._context_panel)
-        self._main_panel.insert_line()        
+                
+        ######### DEBUG #########
+        from helper_functions import strtobool
+
+        if strtobool(os.environ.get("__DEV__", None)):
+            self.generate_dev_panel()
         #########################
+
+        self._main_panel.insert_line()
+
+        self._clear_inbuilt_apps()
 
         # Initialize all available app commands
         self._init_commands()
@@ -339,6 +396,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if pref_size is not None:
                 self.resize(pref_size)
 
+
+    def generate_dev_panel(self):
+        self._dev_panel: BasePanel = self._init_panel(BasePanel, "DEV", self._main_panel)
+        self._link_panel(self._main_panel.insert_menu_button(self._dev_panel), self._dev_panel)
+        
 
     def closeEvent(self, event):
         """Window behaviour on close."""
@@ -490,8 +552,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                         self._anim_window_geom.start()
 
 
-    def _update_stays_on_top(self):
-        self.setWindowFlag(Qt.WindowStaysOnTopHint, self._stays_on_top())
+    def _update_stays_on_top(self, override = None):
+        self.setWindowFlag(Qt.WindowStaysOnTopHint, self._stays_on_top() if override is None else override)
         if self._update_flags:
             self.show()
 
@@ -501,6 +563,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self._update_flags:
             self.show()
 
+    
+    def to_front(self, all_windows=True):
+        if all_windows:
+            for window in QApplication.allWindows():
+                window.raise_()
+                window.activateWindow()
+        else:
+            self.activateWindow()
+            
   
     def open_logging_console(self):
         app = QCoreApplication.instance()
@@ -516,6 +587,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self._engine:
             self._engine.exit()
         os._exit(0)
+
+### Dialog #####################################################################
+
+    def message_box(self, icon, title, text, buttons=QMessageBox.Ok, parent=None, flags=Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint | Qt.WindowStaysOnTopHint):
+        
+        msg_box = QMessageBox(icon, title, text, buttons, parent, flags)
+        msg_box.show()
+        
+        screen = QGuiApplication.screenAt(QCursor().pos())
+        fg = msg_box.frameGeometry()
+        fg.moveCenter(screen.geometry().center())
+        msg_box.move(fg.topLeft())
+     
+        return msg_box.exec_()
 
 ### Config #####################################################################
     

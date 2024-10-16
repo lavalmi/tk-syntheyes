@@ -57,7 +57,7 @@ class BreakdownSceneOperations(HookBaseClass):
             file = obj.Get("file")
             if not file:
                 continue
-            file: str = os.path.normpath(file)
+            file = os.path.normpath(file)
             items.append({"node": str(obj.Name()), "type": str(obj.Type()), "path": str(file)})
 
         return items
@@ -81,7 +81,7 @@ class BreakdownSceneOperations(HookBaseClass):
         for i in items:
             node_name = i["node"]
             node_type = i["type"]
-            new_path = i["path"]#.replace(os.path.sep, "/")
+            new_path = i["path"]
 
             if node_type in node_type_list:
                 engine.log_debug(
@@ -91,8 +91,10 @@ class BreakdownSceneOperations(HookBaseClass):
                     obj: SyObj = hlev.FindMeshByName(node_name)
                     if obj:
                         hlev.Begin()
-                        obj.Call("readMesh", new_path)
-                        hlev.Accept("Update: {}".format(node_name))
+                        try:
+                            obj.Call("readMesh", new_path)
+                        except Exception as e: raise e
+                        finally: hlev.Accept("Update: {}".format(node_name))
 
     def find_node(self, node_name):
         engine: SynthEyesEngine = self.parent.engine
@@ -101,5 +103,7 @@ class BreakdownSceneOperations(HookBaseClass):
         obj: SyObj = hlev.FindMeshByName(node_name)
         if obj:
             hlev.Begin()
-            hlev.Select1Object(obj)
-            hlev.Accept("Find: {}".format(node_name))
+            try:
+                hlev.Select1Object(obj)
+            except Exception as e: raise e
+            finally: hlev.Accept("Find: {}".format(node_name))

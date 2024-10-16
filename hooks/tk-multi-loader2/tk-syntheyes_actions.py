@@ -134,8 +134,7 @@ class SyntheyesActions(HookBaseClass):
             "Parameters: %s. Publish Data: %s" % (name, params, sg_publish_data)
         )
 
-        # resolve path - forward slashes on all platforms in Nuke
-        path = self.get_publish_path(sg_publish_data).replace(os.path.sep, "/")
+        path = self.get_publish_path(sg_publish_data)
 
         if name == "import_mesh":
             self._import_mesh(path, sg_publish_data)
@@ -155,6 +154,8 @@ class SyntheyesActions(HookBaseClass):
         hlev = engine.get_syntheyes_connection()
 
         hlev.Begin()
-        obj: SyObj = hlev.CreateNew("MESH")
-        obj.Call("ReadMesh", path)
-        hlev.Accept("Import Mesh")
+        try:
+            obj: SyObj = hlev.CreateNew("MESH")
+            obj.Call("ReadMesh", os.path.realpath(path))
+        except Exception as e: raise e
+        finally: hlev.Accept("Import Mesh")

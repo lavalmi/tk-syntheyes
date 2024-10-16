@@ -13,6 +13,8 @@ class BasePanel(QWidget, Ui_BasePanel):
         self.max_button_width = 0
         self.update_preferred_width()
 
+        self._btn_back = None
+
     def make_sub_panel(self, panel):
         btn = self.insert_menu_button(panel, is_back_button=True)
         self.insert_line()
@@ -46,12 +48,19 @@ class BasePanel(QWidget, Ui_BasePanel):
         return btn
     
     def insert_menu_button(self, panel, icon:QIcon=None, row=-1, is_back_button=False):
+        if is_back_button and self._btn_back:
+            return self._btn_back
+        
         if row < 0:
-            row = self.gridLayout.rowCount() - 1
+            row = 0 if is_back_button else self.gridLayout.rowCount() - 1
 
         right = self.panel_depth <= panel.panel_depth        
         self.insert_menu_indicator(right, row)
         btn = self.insert_button(icon, "Back" if is_back_button else panel.name, row)
+        
+        if is_back_button:
+            self._btn_back = btn
+
         return btn
     
     def insert_menu_indicator(self, right=True, row=-1):
@@ -81,3 +90,6 @@ class BasePanel(QWidget, Ui_BasePanel):
 
     def update_preferred_width(self):
         self.preferred_width = 2 * (self.menu_indicator_size + self.gridLayout.horizontalSpacing()) + self.max_button_width
+
+    def get_back_button(self):
+        return self._btn_back
