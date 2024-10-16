@@ -9,11 +9,9 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
-import re
+import glob
 import sgtk
-import shutil
 import time
-from pathlib import Path
 
 from engine import SynthEyesEngine
 
@@ -260,8 +258,11 @@ class SyntheyesUndistortedPlatePublishPlugin(HookBaseClass):
         shot = camera.shot
         live = shot.live
 
-        anim_start = hlev.AnimStart()
-        anim_end = hlev.AnimEnd()
+        # 0. verify that the target directory is empty
+        dir = os.path.dirname(item.properties["path"])
+        if len(os.listdir(dir)):
+            raise Exception("Error: The output directory is not empty.")
+
         first_undo_block = "Prepare undistorted export"
         prepset_name = "sgtk_undistort_plate"
         prepset_path = os.path.abspath(os.path.join(self.disk_location, os.pardir, "prepsets", prepset_name + ".prp"))
@@ -270,9 +271,9 @@ class SyntheyesUndistortedPlatePublishPlugin(HookBaseClass):
             # 1. disable resampling in preprocessor
             live.stabilizeMode = float(int(live.stabilizeMode) & ~128)
             live.Call("MakeStabilizeReference")
-        
+
             # 2. setup render settings
-            shot.renderFile = item.properties["path"] % 1001 # replace SEQ field with start frame number 1001
+            shot.renderFile = item.properties["path"] % (shot.start + shot.frameMatchOffset)  # replace SEQ field with start frame number
             shot.renderCompression = "exr: <DWAA32 Lossy>,100"
             
             # 3. load custom prepset
@@ -328,9 +329,11 @@ class SyntheyesUndistortedPlatePublishPlugin(HookBaseClass):
             hlev.Undo()
         hlev.Undo() # Undo once more to revert the first undo block
 
-        # reset anim start & end as these are unaffected by the undo system
-        hlev.SetAnimStart(anim_start)
-        hlev.SetAnimEnd(anim_end)
+        # 8. check if the correct number of frames was written to the file system
+        shot_len = shot.stop - shot.start + 1
+        seq = glob.glob(item.properties["path"].replace("%04d", "[0-9]" * 4))
+        if len(seq) != shot_len:
+            raise Exception("Error: The number of rendered frames ({:g}) does not match the current shot settings in SynthEyes ({:g}).".format(len(seq), shot_len))
 
 def _get_save_as_action():
     """

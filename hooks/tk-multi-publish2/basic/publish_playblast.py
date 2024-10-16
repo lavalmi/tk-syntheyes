@@ -211,7 +211,16 @@ class SyntheyesPlayblastPublishPlugin(HookBaseClass):
         work_fields["syntheyes.export_name"] = item.name.replace(" ", "_")
 
         if settings["type_spec"].value == "sequence":
-            work_fields["SEQ"] = 1001
+            cam_found = False
+            unique_id = item.properties["unique_id"]
+            for cam in hlev.Cameras():
+                if cam.uniqueID == unique_id:
+                    shot = cam.shot
+                    work_fields["SEQ"] = shot.start + shot.frameMatchOffset
+                    cam_found = True
+                    break    
+            if not cam_found:
+                return False
 
         # create the publish path by applying the fields. store it in the item's
         # properties. This is the path we'll create and then publish in the base

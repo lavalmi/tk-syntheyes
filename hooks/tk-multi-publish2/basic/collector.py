@@ -338,17 +338,28 @@ class SyntheyesSessionCollector(HookBaseClass):
             playblast_files = sorted(glob.glob(playblast_path))
             if not len(playblast_files): continue
 
+            # get first and last frame and see if they match the camera's shot
+            first_frame = playblast_template.get_fields(playblast_files[0])["SEQ"]
+            last_frame = playblast_template.get_fields(playblast_files[-1])["SEQ"]
+
+            shot = cam.shot            
+            if (shot.stop - shot.start + 1 != len(playblast_files) 
+                or first_frame != shot.start + shot.frameMatchOffset 
+                or last_frame != shot.stop + shot.frameMatchOffset):
+                continue
+
             # create and add the item
             scene_item = self.get_or_create_item_parent(cam.Name(), parent_icon_path, parent_item)
             item = scene_item.create_item("file.image.sequence", "Playblast", cam.Name())
 
             item.properties["sequence_paths"] = playblast_files
-            item.properties["first_frame"] = playblast_template.get_fields(playblast_files[0])["SEQ"]
-            item.properties["last_frame"] = playblast_template.get_fields(playblast_files[-1])["SEQ"]
+            item.properties["first_frame"] = first_frame
+            item.properties["last_frame"] = last_frame
             item.properties["path"] = playblast_path.replace("*", "%04d")
 
             # get the icon path to display for this item
             item.set_icon_from_path(icon_path)
+
             item.properties["unique_id"] = cam.uniqueID
             item.expanded = False
 

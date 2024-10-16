@@ -1,4 +1,5 @@
 import os
+import glob
 import time
 from threading import Thread
 
@@ -11,6 +12,7 @@ from tk_syntheyes.inbuilt_app import InbuiltApp
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
+
 
 class PlayblastInbuiltApp(InbuiltApp):
 
@@ -81,16 +83,32 @@ class PlayblastInbuiltApp(InbuiltApp):
         timer = Timer(0.033, 5)
         first_undo_block = "Prepare SGTK Playblast"
         reached_first_undo = False
-        anim_start = hlev.AnimStart()
-        anim_end = hlev.AnimEnd()
         try:
             active_cam = hlev.Active().cam
             shot = active_cam.shot
             live = shot.live
-
-            # set anim range to match the active shot
-            hlev.SetAnimStart(shot.start)
-            hlev.SetAnimEnd(shot.start + shot.length - 1)
+            
+            # get the file path to export to and clear the directory or cancel
+            work_path = self._get_playblast_work_path(active_cam.Name())[0]
+            path = work_path % (shot.start + shot.frameMatchOffset)
+            dir = os.path.dirname(path)
+            if os.path.exists(dir):
+                files = os.listdir(dir)
+                if len(files):
+                    result = ui.message_box(
+                        QMessageBox.Warning,
+                        "Not an empty directory",
+                        "The Playblast directory is not empty. Do you want to clean all files in the directory?\n{}".format(dir),
+                        QMessageBox.Yes | QMessageBox.Cancel,
+                        self.engine.ui
+                    )
+                    if result == QMessageBox.Yes:
+                        for file in files:
+                            os.remove(os.path.join(dir, file))
+                    else:
+                        raise Exception("Error: Playblast directory is not empty.")
+            else:
+                os.makedirs(dir)
 
             prepset_name = "sgtk_render_playblast"
             prepset_path = os.path.abspath(os.path.join(self.engine.disk_location, "prepsets", prepset_name + ".prp"))
@@ -157,11 +175,6 @@ class PlayblastInbuiltApp(InbuiltApp):
             timer.reset()
             while not hlev.Popup().IsValid():
                 timer.sleep("Error: Timeout while waiting for Preview Movie window to open.")
-            
-            # get the file path to export to
-            path = self._get_playblast_work_path(active_cam.Name())[0]
-            path = path % 1001
-            os.makedirs(os.path.dirname(path), exist_ok=True)
 
             # set prview movie file and compression
             popup = hlev.Popup()
@@ -200,6 +213,12 @@ class PlayblastInbuiltApp(InbuiltApp):
             if not persp_already_open:
                 persp.CloseAndWait()
 
+            # check if the correct number of frames was written to the file system
+            shot_len = shot.stop - shot.start + 1
+            seq = glob.glob(work_path.replace("%04d", "[0-9]" * 4))
+            if len(seq) != shot_len:
+                raise Exception("Error: The number of rendered frames ({:g}) does not match the current shot settings in SynthEyes ({:g}).".format(len(seq), shot_len))
+
         except Exception as e:
             err_msg = "Error during Playblast: {}".format(e)
             self.engine.log_error(err_msg)
@@ -214,9 +233,6 @@ class PlayblastInbuiltApp(InbuiltApp):
         finally: 
             if reached_first_undo:
                 self._undo_playblast_changes(first_undo_block)
-                # reset anim start & end as these are unaffected by the undo system
-                hlev.SetAnimStart(anim_start)
-                hlev.SetAnimEnd(anim_end)
 
         ui.message_box(
             QMessageBox.Information,
