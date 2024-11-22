@@ -52,8 +52,7 @@ class PlayblastInbuiltApp(InbuiltApp):
                 "Missing App",
                 "The tk-multi-publish2 app is required to resolve the path for the playblast, "
                 "yet it is currently unavailable.",
-                QMessageBox.Abort,
-                ui
+                QMessageBox.Abort
             )
             return
 
@@ -62,8 +61,7 @@ class PlayblastInbuiltApp(InbuiltApp):
                 QMessageBox.Critical,
                 "Open Popup",
                 "A popup is currently open. Close it first, before starting the playblast.",
-                QMessageBox.Abort,
-                ui
+                QMessageBox.Abort
             )
             return
 
@@ -72,8 +70,7 @@ class PlayblastInbuiltApp(InbuiltApp):
                 QMessageBox.Warning,
                 "Unsaved Changes",
                 "The current scene has unsaved changes. Do you want to save the scene before continueing?",
-                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
-                ui
+                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
             )
             if save == QMessageBox.Yes:
                 self.engine.save_session()
@@ -98,9 +95,8 @@ class PlayblastInbuiltApp(InbuiltApp):
                     result = ui.message_box(
                         QMessageBox.Warning,
                         "Not an empty directory",
-                        "The Playblast directory is not empty. Do you want to clean all files in the directory?\n{}".format(dir),
-                        QMessageBox.Yes | QMessageBox.Cancel,
-                        self.engine.ui
+                        "The Playblast directory is not empty. Do you want to delete all files in the directory?\n{}".format(dir),
+                        QMessageBox.Yes | QMessageBox.Cancel
                     )
                     if result == QMessageBox.Yes:
                         for file in files:
@@ -204,8 +200,8 @@ class PlayblastInbuiltApp(InbuiltApp):
             popup.ByID(2353).SetSpnValue(180) # Shutter Angle
             popup.ByID(2354).SetSpnValue(-90) # Phase
 
+            # NOTE: ClickAndWait does not actually wait for the entire sequence. I presume this only covers the execution of the starting command for the rendering.
             popup.ByID(1).ClickAndWait() # Start
-            hlev.Unlock()
             
             while popup.IsValid():
                 time.sleep(0.25)
@@ -226,8 +222,7 @@ class PlayblastInbuiltApp(InbuiltApp):
                 QMessageBox.Critical,
                 "Failure",
                 err_msg,
-                QMessageBox.Abort,
-                self.engine.ui
+                QMessageBox.Abort
             )
             return
         finally: 
@@ -238,8 +233,7 @@ class PlayblastInbuiltApp(InbuiltApp):
             QMessageBox.Information,
             "Success",
             "The Playblast was successfully rendered and is now available for publishing.",
-            QMessageBox.Ok,
-            self.engine.ui
+            QMessageBox.Ok
         )
 
     

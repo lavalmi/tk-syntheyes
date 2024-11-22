@@ -13,12 +13,12 @@ import os
 import threading
 import time
 
+from engine import SynthEyesEngine
 
 class Heartbeat(object):
 
     def __init__(self, engine, logger):
         self._logger: logging.Logger = logger
-        from engine import SynthEyesEngine
         self._engine: SynthEyesEngine = engine
         self._stop = False
         self._running = False

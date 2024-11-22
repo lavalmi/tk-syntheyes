@@ -26,6 +26,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.setupUi(self)
 
+        self._suppressed = False
+
         self._engine = engine
         self.click_pos = None
         self._menu_click_time = time.time()
@@ -88,7 +90,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
     def move_window(self, event):
-        if not (self.click_pos is None or self.isMaximized()):
+        if not (self.click_pos is None or self.isMaximized() or self.isMinimized()):
             if event.buttons() == Qt.LeftButton:
                 self.move(self.pos() + event.globalPos() - self.click_pos)
                 self.click_pos = event.globalPos()
@@ -109,6 +111,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def menu_mouse_press_event(self, event):
         self._menu_click_time = time.time()
         self.click_pos = event.globalPos()
+        self.activateWindow()
+        self.setFocus()
+        self.raise_()
         self.menubar.defaultMousePressEvent(event)
     
     def menu_double_click_event(self, event):
@@ -118,6 +123,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             self.menubar.defaultMouseDoubleClickEvent(event)
     
+    def changeEvent(self, event):
+        if getattr(self, "_suppressed", None):
+            if event.type() == QEvent.WindowStateChange:
+                if event.oldState() & Qt.WindowMinimized:
+                    self.minimize()
+
+        super().changeEvent(event)
+
+    def suppress(self):
+        self._suppressed = True
+        self._freed_state = self.windowState()
+        self.minimize()
+
+    def free(self):
+        self._suppressed = False
+        if hasattr(self, "_freed_state"):
+            self.setWindowState(self._freed_state)
+            self.repaint()
+
     def get_layout_stretch_steps(self, layout: QBoxLayout):
         """Return the total amount of stretch of the given layout."""
         return layout.stretch(0) + layout.stretch(1)
@@ -162,7 +186,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self._engine.log_debug("%s already exists in parent panel %s", name, parent_panel.name)
                 return None
         
-        panel: panel_type = panel_type(self)
+        panel = panel_type(self)
         panel.setVisible(visible)
         panel.setEnabled(enabled)
         panel.name = name
@@ -413,7 +437,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
     def minimize(self):
-        self.setWindowState(Qt.WindowMinimized)
+        self.click_pos = None
+        self.showMinimized()
+
+    def find_children_of_type(self, type: type):
+        queue = [self]
+        result = []
+        
+        while queue:
+            current = queue.pop(0)
+            for child in current.children():
+                if isinstance(child, type):
+                    result.append(child)
+                if hasattr(child, 'children'):
+                    queue.append(child)
+        return result
 
     
     def _switch_panel(self, target_panel: QWidget, easing_curve_type:QEasingCurve.Type=QEasingCurve.OutBounce, amplitude:float=0.25):
@@ -591,15 +629,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 ### Dialog #####################################################################
 
     def message_box(self, icon, title, text, buttons=QMessageBox.Ok, parent=None, flags=Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint | Qt.WindowStaysOnTopHint):
-        
         msg_box = QMessageBox(icon, title, text, buttons, parent, flags)
-        msg_box.show()
+        msg_box.setAttribute(Qt.WA_DeleteOnClose, True)
         
-        screen = QGuiApplication.screenAt(QCursor().pos())
-        fg = msg_box.frameGeometry()
-        fg.moveCenter(screen.geometry().center())
-        msg_box.move(fg.topLeft())
-     
+        if parent:
+            screen = QGuiApplication.screenAt(QCursor().pos())
+            fg = msg_box.frameGeometry()
+            fg.moveCenter(screen.geometry().center())
+            msg_box.move(fg.topLeft())
+        else:
+            msg_box.setModal(True)
+
         return msg_box.exec_()
 
 ### Config #####################################################################

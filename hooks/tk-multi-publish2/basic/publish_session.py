@@ -199,6 +199,13 @@ class SynthEyesSessionPublishPlugin(HookBaseClass):
         path = engine.get_session_path()
         hlev = engine.get_syntheyes_connection()
 
+        # ---- ensure the no popup is open in SynthEyes
+
+        if (popup := hlev.Popup()).IsValid():
+            error_msg = "A popup \"{}\" is currently open in SynthEyes, which might interfere with the publishing. Close the popup first and retry.".format(popup.Name())
+            self.logger.error(error_msg)
+            raise Exception(error_msg)            
+
         # ---- ensure the session has been saved
 
         if not path or hlev.HasChanged():

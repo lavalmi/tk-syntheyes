@@ -542,18 +542,20 @@ class SynthEyesEngine(Engine):
         
         # check if a popup that might interfere with the reset is still open and ask the user to close it first
         hlev = self.get_syntheyes_connection()
-        while hlev.Popup().IsValid():
+        self.ui.suppress()
+
+        while (popup := hlev.Popup()).IsValid():
             try:
                 QtGui.QApplication.setOverrideCursor(QtCore.Qt.ArrowCursor)
                 self.ui.message_box(
                     QtGui.QMessageBox.Critical,
                     "Popup detected",
-                    "A popup is currently open in SynthEyes, which might interfere with the scene reset. Close the popup first and then hit OK.",
-                    QtGui.QMessageBox.Ok,
-                    self.ui
+                    "A popup \"{}\" is currently open in SynthEyes, which might interfere with the current action. Close the popup first and then hit OK to proceed.".format(popup.Name()),
+                    QtGui.QMessageBox.Ok
                 )
             finally:
                 QtGui.QApplication.restoreOverrideCursor()
+        self.ui.free()
 
     def check_for_popups(self):
         """
@@ -572,8 +574,7 @@ class SynthEyesEngine(Engine):
                     QtGui.QMessageBox.Critical,
                     "Popup detected - Action canceled",
                     message,
-                    QtGui.QMessageBox.Abort,
-                    self.ui
+                    QtGui.QMessageBox.Abort
                 )
             finally:
                 QtGui.QApplication.restoreOverrideCursor()
