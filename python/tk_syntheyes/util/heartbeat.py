@@ -22,6 +22,7 @@ class Heartbeat(object):
         self._engine: SynthEyesEngine = engine
         self._stop = False
         self._running = False
+        self._shutdown_on_exit = False
 
         self.interval = float(os.getenv('SGTK_SYNTHEYES_HEARTBEAT_INTERVAL', '0.2'))
         self.tolerance = int(os.getenv('SGTK_SYNTHEYES_HEARTBEAT_TOLERANCE', '2'))
@@ -32,7 +33,8 @@ class Heartbeat(object):
     def stop(self):
         self._stop = True
 
-    def join(self, stop: bool=False):
+    def join(self, stop:bool=False, shutdown_on_exit:bool=False):
+        self._shutdown_on_exit = shutdown_on_exit
         if stop: self.stop()
         if self._thread is not threading.current_thread():
             self._thread.join()
@@ -41,8 +43,8 @@ class Heartbeat(object):
         self._running = True
         self._logger.info("Heartbeat: Started")
         error_cycle = 0
+        syntheyes_closed = False
         while not self._stop:
-            error_occurred = False
             time.sleep(self.interval)
             
             # Increment error count or reset if one update successfully went through
@@ -53,7 +55,10 @@ class Heartbeat(object):
                     msg = "Python: Quitting. Heartbeat errors greater than tolerance."
                     self._logger.error(msg)
                     self._stop = True
+                    syntheyes_closed = True
             else: error_cycle = 0
 
-        self._engine.ui.exit()
+        self._logger.info("Heartbeat: Stopped")
         self._running = False
+        if syntheyes_closed or self._shutdown_on_exit:
+            self._engine.ui.emit_exit_signal()

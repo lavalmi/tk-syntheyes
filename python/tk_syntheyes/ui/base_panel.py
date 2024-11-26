@@ -1,4 +1,4 @@
-from ui_base_panel import Ui_BasePanel
+from tk_syntheyes.ui.ui_base_panel import Ui_BasePanel
 
 from PySide2.QtCore import *
 from PySide2.QtGui import *

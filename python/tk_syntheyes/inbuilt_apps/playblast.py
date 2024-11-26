@@ -13,6 +13,7 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
+from tk_syntheyes.util.timer import Timer
 
 class PlayblastInbuiltApp(InbuiltApp):
 
@@ -36,7 +37,7 @@ class PlayblastInbuiltApp(InbuiltApp):
                                    "in the SynthEyes' view 'Floating Perspective'.",
                     "environment": ["asset_step", "element_step", "shot_step"]
                 }
-            },
+            }
         }
 
     def __init__(self, engine: SynthEyesEngine):
@@ -45,7 +46,7 @@ class PlayblastInbuiltApp(InbuiltApp):
     def playblast(self):
         hlev = self.engine.get_syntheyes_connection()
         ui = self.engine.ui
-
+        
         if "tk-multi-publish2" not in self.engine.apps:
             ui.message_box(
                 QMessageBox.Critical,
@@ -266,18 +267,3 @@ class PlayblastInbuiltApp(InbuiltApp):
         path = template.apply_fields(work_fields)
         path = path.replace("9999", "%04d")
         return path, template, work_fields
-        
-class Timer(): #TODO maybe move this somewhere else
-    def __init__(self, sleep, timeout):
-        self._time = 0
-        self._timeout = timeout
-        self._sleep = sleep
-
-    def sleep(self, err_msg=""):
-        time.sleep(self._sleep)
-        self._time += self._sleep
-        if self._time > self._timeout:
-            raise Exception(err_msg)
-        
-    def reset(self):
-        self._time = 0
