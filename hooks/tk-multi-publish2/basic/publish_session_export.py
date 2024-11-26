@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 
 from engine import SynthEyesEngine
-from helper_functions import StoppableThread
+from tk_syntheyes.util.stoppable_thread import StoppableThread
 import SyPy3
 
 HookBaseClass = sgtk.get_hook_baseclass()

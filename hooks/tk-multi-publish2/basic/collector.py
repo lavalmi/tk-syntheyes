@@ -322,7 +322,7 @@ class SyntheyesSessionCollector(HookBaseClass):
         path = sgtk.util.ShotgunPath.normalize(hlev.SNIFileName())
         work_template = parent_item.properties.get("work_template")
         work_fields = work_template.get_fields(path)
-        work_fields["playblast_extension"] = "jpg" #TODO add an option to select png or jpg
+        work_fields["playblast_extension"] = "jpg" #TODO maybe add an option to select png or jpg
         work_fields["SEQ"] = 9999
 
         icon_path = os.path.join(self.disk_location, os.pardir, "icons", "playblast.png")
