@@ -201,7 +201,8 @@ class SynthEyesSessionPublishPlugin(HookBaseClass):
 
         # ---- ensure the no popup is open in SynthEyes
 
-        if (popup := hlev.Popup()).IsValid():
+        popup = hlev.Popup()
+        if popup.IsValid():
             error_msg = "A popup \"{}\" is currently open in SynthEyes, which might interfere with the publishing. Close the popup first and retry.".format(popup.Name())
             self.logger.error(error_msg)
             raise Exception(error_msg)            

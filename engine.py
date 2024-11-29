@@ -544,13 +544,17 @@ class SynthEyesEngine(Engine):
         hlev = self.get_syntheyes_connection()
         self.ui.suppress()
 
-        while (popup := hlev.Popup()).IsValid():
+        while True:
+            popup = hlev.Popup()
+            if not popup.IsValid():
+                break
             try:
                 QtGui.QApplication.setOverrideCursor(QtCore.Qt.ArrowCursor)
                 self.ui.message_box(
                     QtGui.QMessageBox.Critical,
                     "Popup detected",
-                    "A popup \"{}\" is currently open in SynthEyes, which might interfere with the current action. Close the popup first and then hit OK to proceed.".format(popup.Name()),
+                    "A popup \"{}\" is currently open in SynthEyes, which might interfere with the current action. Close the popup first and then hit OK to proceed.".format(
+                        popup.Name()),
                     QtGui.QMessageBox.Ok
                 )
             finally:
