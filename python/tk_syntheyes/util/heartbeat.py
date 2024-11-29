@@ -13,13 +13,12 @@ import os
 import threading
 import time
 
-import builtins
+from engine import SynthEyesEngine
 
 class Heartbeat(object):
 
     def __init__(self, engine, logger):
         self._logger: logging.Logger = logger
-        from engine import SynthEyesEngine
         self._engine: SynthEyesEngine = engine
         self._stop = False
         self._running = False
@@ -28,8 +27,7 @@ class Heartbeat(object):
         self.tolerance = int(os.getenv('SGTK_SYNTHEYES_HEARTBEAT_TOLERANCE', '2'))
 
         self._thread = threading.Thread(target=self.heartbeat_thread_run, name="HeartbeatThread")
-        if not getattr(builtins, "_DEBUG_", False):
-            self._thread.start()
+        self._thread.start()
 
     def stop(self):
         self._stop = True

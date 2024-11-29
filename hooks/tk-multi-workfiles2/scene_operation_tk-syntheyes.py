@@ -8,15 +8,18 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-import SyPy3.symenu
-import SyPy3.sywin
 import sgtk
 from sgtk.platform.qt import QtGui
 
 from engine import SynthEyesEngine
 import SyPy3
+import SyPy3.sywin
 from SyPy3.sywin import SyWin
+import SyPy3.symenu
 from SyPy3.symenu import SyMenu
+
+import os
+import time
 
 HookClass = sgtk.get_hook_baseclass()
 
@@ -81,20 +84,16 @@ class SceneOperation(HookClass):
             return bool(hlev.OpenSNI(file_path))
 
         elif operation == "save":
-            scene = hlev.Scene()
-            scene.Call("Save", file_path)
+            engine.save_session()
 
         elif operation == "save_as":
-            scene = hlev.Scene()
-            scene.Call("Save", file_path)
-            hlev.SetSNIFileName(file_path)
+            engine.save_session_as(file_path)
 
         elif operation == "reset":
-            changed = hlev.HasChanged()
+            # Ask the user to close popups. Otherwise SynthEyes might crash.
+            if engine.check_for_popups():
+                return False
+            
             hlev.ClearChanged()
-            if changed:
-                hlev.ClickTopMenuAndWait("File", "Close")
+            hlev.PerformActionByIDAndContinue(40610) # File > Close
             return True
-        
-        elif operation == "prepare_new":
-            hlev.ClickTopMenuAndContinue("File", "New")

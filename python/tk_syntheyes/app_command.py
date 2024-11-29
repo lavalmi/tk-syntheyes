@@ -19,6 +19,12 @@ class AppCommand(object):
         self.favourite = False
         self.callback = command_dict["callback"]
 
+    @classmethod
+    def init_without_dict(self, name, app_name, properties, callback):
+        if not properties:
+            properties = {}
+        return AppCommand(name, {"app" : app_name, "properties" : properties, "callback" : callback})
+
     def get_app_name(self):
         """
         Returns the name of the app that this command belongs to
