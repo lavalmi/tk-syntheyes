@@ -340,13 +340,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 # already have sub menu
                 panel = sub_panel
             else:
+                # get command description
+                description = command.properties.get("description")
                 # create new sub menu
                 sub_panel: BasePanel = self._init_panel(BasePanel, item_label, panel, False, False, False) #TODO Consider whether the sub panels should be added to the quick select or not
-                self._link_panel(panel.insert_menu_button(sub_panel), sub_panel)
+                self._link_panel(panel.insert_menu_button(sub_panel, tooltip=description), sub_panel)
                 panel = sub_panel
 
         # Finally create the command button
-        return panel.insert_button(None, parts[-1], -1, command.callback)
+        return panel.insert_button(None, parts[-1], command.properties["description"], -1, command.callback)
     
 
     def _link_panel(self, button, panel_to):
