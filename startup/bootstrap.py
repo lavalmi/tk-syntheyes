@@ -12,7 +12,6 @@
 This file is loaded automatically by SynthEyes at startup
 It sets up the Toolkit context and prepares the tk-syntheyes engine.
 """
-
 import os
 import sys
 
@@ -52,19 +51,17 @@ def start_toolkit_classic():
             "be disabled. Details: %s" % e
         )
 
-    #try:
-    # Start up the toolkit engine from the environment data
-    logger.debug(
-        "Launching engine instance '%s' for context %s" % (env_engine, env_context)
-    )
-    global g_engine
-    g_engine = sgtk.platform.start_engine(env_engine, context.sgtk, context)
-
-
-    # except Exception as e:
-    #     raise sgtk.TankError(
-    #         "Flow Production Tracking: Could not start engine: %s" % e
-    #     )
+    try:
+        # Start up the toolkit engine from the environment data
+        logger.debug(
+            "Launching engine instance '%s' for context %s" % (env_engine, env_context)
+        )
+        global g_engine
+        g_engine = sgtk.platform.start_engine(env_engine, context.sgtk, context)
+    except Exception as e:
+        raise sgtk.TankError(
+            "Flow Production Tracking: Could not start engine: %s" % e
+        )
     
     logger.debug("Successfully launched toolkit.")
 

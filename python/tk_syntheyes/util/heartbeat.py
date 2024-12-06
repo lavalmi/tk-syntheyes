@@ -15,6 +15,7 @@ import time
 
 from engine import SynthEyesEngine
 
+
 class Heartbeat(object):
 
     def __init__(self, engine, logger):

@@ -14,12 +14,8 @@ Hook that loads defines all the available actions, broken down by publish type.
 import os
 
 import sgtk
-
-import SyPy3
-from SyPy3.syobj import SyObj
-from SyPy3.sywin import SyWin
 from engine import SynthEyesEngine
-
+from SyPy3.syobj import SyObj
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -157,5 +153,7 @@ class SyntheyesActions(HookBaseClass):
         try:
             obj: SyObj = hlev.CreateNew("MESH")
             obj.Call("ReadMesh", os.path.realpath(path))
-        except Exception as e: raise e
-        finally: hlev.Accept("Import Mesh")
+        except:
+            raise
+        finally:
+            hlev.Accept("Import Mesh")

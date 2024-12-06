@@ -1,8 +1,5 @@
-import os
-
-import SyPy3
 from SyPy3.sylevel import SyLevel
-from SyPy3.syobj import SyObj
+
 
 def prepare(engine, settings, item):
     """
@@ -32,8 +29,10 @@ def prepare(engine, settings, item):
             if mesh.obj:
                 mesh.isExported = False
 
-    except Exception as e: raise e
-    finally: hlev.Accept("Prepare Export")
+    except:
+        raise
+    finally:
+        hlev.Accept("Prepare Export")
         
 #def export(engine, settings, item):
     #"""

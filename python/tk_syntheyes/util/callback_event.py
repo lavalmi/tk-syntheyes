@@ -14,8 +14,8 @@ framework for running callbacks in the main PySide GUI thread
 This is used by the logging console to update the gui on the main thread
 and so it cannot use logging itself
 """
-
 import logging
+
 from PySide2 import QtCore
 
 

@@ -9,11 +9,8 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
+
 import sgtk
-import shutil
-
-from pathlib import Path
-
 from engine import SynthEyesEngine
 
 HookBaseClass = sgtk.get_hook_baseclass()

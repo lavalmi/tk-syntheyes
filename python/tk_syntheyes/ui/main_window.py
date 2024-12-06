@@ -4,23 +4,21 @@ import inspect
 import os
 import sys
 import time
-
 from configparser import SafeConfigParser
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
-
-from tk_syntheyes.ui.ui_main_window import Ui_MainWindow
-from tk_syntheyes.ui.base_panel import BasePanel
-
+from engine import SynthEyesEngine
+from PySide2.QtCore import (Property, QEasingCurve, QEvent, QPropertyAnimation,
+                            QSize, Qt, Signal, Slot)
+from PySide2.QtGui import QCursor, QGuiApplication, QKeySequence
+from PySide2.QtWidgets import (QApplication, QBoxLayout, QLayout, QLayoutItem,
+                               QMainWindow, QMenuBar, QMessageBox, QPushButton,
+                               QVBoxLayout, QWidget)
 from tk_syntheyes import logging_console
 from tk_syntheyes.app_command import AppCommand
 from tk_syntheyes.inbuilt_app import InbuiltApp
+from tk_syntheyes.ui.base_panel import BasePanel
+from tk_syntheyes.ui.ui_main_window import Ui_MainWindow
 
-from engine import SynthEyesEngine
-
-import sgtk
 
 class MainWindow(QMainWindow, Ui_MainWindow):
 
@@ -230,30 +228,37 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     @property
     def inbuilt_apps(self):
-        if not getattr(self, "_inbuilt_apps", None):
-            self._inbuilt_apps = {}
-            inbuilt_apps_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "inbuilt_apps"))
-            if os.path.isdir(inbuilt_apps_path):
-                for file in os.listdir(inbuilt_apps_path):
-                    file_path = os.path.join(inbuilt_apps_path, file)
-                    if not os.path.isfile(file_path): continue
+        if getattr(self, "_inbuilt_apps", None):
+            return self._inbuilt_apps
+        
+        inbuilt_apps_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "inbuilt_apps"))
+        if not os.path.isdir(inbuilt_apps_path):
+            return {}
 
-                    spec = importlib.util.spec_from_file_location(file.rsplit(".", 1)[0], file_path)
-                    if not spec: continue
+        self._inbuilt_apps = {}
+        for file in os.listdir(inbuilt_apps_path):
+            file_path = os.path.join(inbuilt_apps_path, file)
+            if not os.path.isfile(file_path): 
+                continue
 
-                    self._engine.log_debug("Loading inbuilt app: %s", file)
-                    mod = importlib.util.module_from_spec(spec)
+            spec = importlib.util.spec_from_file_location(file.rsplit(".", 1)[0], file_path)
+            if not spec:
+                continue
 
-                    if mod.__name__ in sys.modules:
-                        importlib.reload(mod)
+            self._engine.log_debug("Loading inbuilt app: %s", file)
+            mod = importlib.util.module_from_spec(spec)
 
-                    spec.loader.exec_module(mod)
-                    if not mod: continue
+            if mod.__name__ in sys.modules:
+                importlib.reload(mod)
 
-                    # iterate over all classes
-                    for cls_name, cls in inspect.getmembers(mod, inspect.isclass):
-                        if cls != InbuiltApp and issubclass(cls, InbuiltApp):
-                            self._inbuilt_apps[cls_name] = cls(self._engine)
+            spec.loader.exec_module(mod)
+            if not mod: 
+                continue
+
+            # iterate over all classes
+            for cls_name, cls in inspect.getmembers(mod, inspect.isclass):
+                if cls != InbuiltApp and issubclass(cls, InbuiltApp):
+                    self._inbuilt_apps[cls_name] = cls(self._engine)
             
         return self._inbuilt_apps
 
@@ -382,9 +387,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         layout = self.sca_quick_select_contents.layout()
         while layout.count() > 1:
             item: QLayoutItem = layout.takeAt(0)
-            if item: 
+            if item:
                 widget = item.widget()
-                if widget: 
+                if widget:
                     widget.deleteLater()
 
         for panel in self._panels:

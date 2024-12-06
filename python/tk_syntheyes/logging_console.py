@@ -11,11 +11,9 @@
 # log console
 import logging
 
-from tk_syntheyes.util import callback_event
-
-from PySide2 import QtCore, QtWidgets
-
 import sgtk
+from PySide2 import QtCore, QtWidgets
+from tk_syntheyes.util import callback_event
 
 COLOR_MAP = {
     'CRITICAL': 'indianred',
@@ -79,7 +77,7 @@ class LogConsole(QtWidgets.QDialog):
                 del log_handler
             self._log_handler = QtLogHandler(self.logs)
             engine.logger.addHandler(self._log_handler)
-        except Exception as e:
+        except:
             msg = "Could not create logging console"
             engine.logger.exception(msg)
             raise sgtk.TankError(msg)

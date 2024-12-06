@@ -1,19 +1,13 @@
-import os
 import glob
+import os
 import time
-from threading import Thread
 
 import sgtk
-import SyPy3
-
 from engine import SynthEyesEngine
+from PySide2.QtWidgets import QMessageBox
 from tk_syntheyes.inbuilt_app import InbuiltApp
-
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
-
 from tk_syntheyes.util.timer import Timer
+
 
 class PlayblastInbuiltApp(InbuiltApp):
 
@@ -117,8 +111,9 @@ class PlayblastInbuiltApp(InbuiltApp):
                         
                 # 2. load custom prepset
                 shot.Call("LoadPrepSetsFromFile", 1, prepset_path)
-            except Exception as e: raise e
-            finally: 
+            except:
+                raise
+            finally:
                 hlev.AcceptShotChanges(shot, first_undo_block)
                 reached_first_undo = True
 
@@ -144,8 +139,10 @@ class PlayblastInbuiltApp(InbuiltApp):
                     if cam != active_cam:
                         cam.show = False
                 hlev.ClearSelection()
-            except Exception as e: raise e
-            finally: hlev.Accept("Hide other Cameras")
+            except:
+                raise
+            finally:
+                hlev.Accept("Hide other Cameras")
 
             # 5. open floating perspective if not already present            
             window_title = "Perspective Window"
@@ -226,7 +223,7 @@ class PlayblastInbuiltApp(InbuiltApp):
                 QMessageBox.Abort
             )
             return
-        finally: 
+        finally:
             if reached_first_undo:
                 self._undo_playblast_changes(first_undo_block)
 

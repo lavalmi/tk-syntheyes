@@ -18,10 +18,9 @@ import os
 import sys
 
 import sgtk
-from sgtk.platform import Engine
-
 import SyPy3
 import SyPy3.sytalker
+from sgtk.platform import Engine
 
 parent_dir = os.path.dirname(__file__)
 if parent_dir not in sys.path:
@@ -58,7 +57,7 @@ class SynthEyesEngine(Engine):
 
             {
                 "name": "SynthEyes",
-                "version": "2017 Update 4",
+                "version": "2023.10.1057",
             }
 
         The returned dictionary is of following form on an error preventing
@@ -69,34 +68,15 @@ class SynthEyesEngine(Engine):
                 "version: "unknown"
             }
         """
-
-        host_info = {"name": "SynthEyes", "version": "unknown"}
-        '''
+        host_info = {
+            "name": "SynthEyes",
+            "version": "unknown"
+        }
         try:
-            # The 'about -installedVersion' SynthEyes MEL command returns:
-            # - the app name (SynthEyes, SynthEyes LT, SynthEyes IO)
-            # - the major version (2017, 2018)
-            # - the update version when applicable (update 4)
-            syntheyes_installed_version_string = "0"
-
-            # group(0) entire match
-            # group(1) 'SynthEyes' match (name)
-            # group(2) LT, IO, etc ... match (flavor)
-            # group(3) 2017 ... match (version)
-            
-            matches = re.search(
-                r"(syntheyes)\s+([a-zA-Z]+)?\s*(.*)",
-                syntheyes_installed_version_string,
-                re.IGNORECASE,
-            )
-            host_info["name"] = matches.group(1).capitalize().rstrip().lstrip()
-            host_info["version"] = matches.group(3)
-            if matches.group(2):
-                host_info["name"] = host_info["name"] + " " + matches.group(2)
+            hlev = self.get_syntheyes_connection()
+            host_info["version"] = hlev.Version()
         except:
-            # Fallback to 'SynthEyes' initialized above
             pass
-        '''
 
         return host_info
 
@@ -116,18 +96,18 @@ class SynthEyesEngine(Engine):
                 "The current platform is not supported! Supported platforms "
                 "are MacOS, Linux and Windows."
             )
-
+        
         # Get high level handle to SynthEyes' python API
         self._port: int = int(os.environ["SGTK_SYNTHEYES_PORT"])
         self._pin: str = os.environ["SGTK_SYNTHEYES_PIN"]
         if not (self._port and self._pin):
             raise sgtk.TankError("SynthEyes port:%d and pin:%s are not valid.", self._port, self._pin)
         
-        self._hlev: SyPy3.sylevel.SyLevel = SyPy3.SyLevel()
-        if not self._hlev.OpenExisting(self._port, self._pin):
-            raise sgtk.TankError("Could not open existing instance of SynthEyes with port:%s and pin:%s.", self._port, self._pin)
+        # Will initialize the connection if not present already
+        self.get_syntheyes_connection()
 
-        syntheyes_ver = self._hlev.Version()
+        host_info = self.host_info
+        syntheyes_ver = host_info["version"]
         if syntheyes_ver in {
             "2023.10.1057",
         }:
@@ -137,8 +117,7 @@ class SynthEyesEngine(Engine):
                 "The Flow Production Tracking has not yet been fully tested with SynthEyes %s. "
                 "You can continue to use Toolkit but you may experience bugs or instability."
             )
-            # always log the warning to the script editor:
-            self.logger.warning(msg)
+            self.logger.warning(msg, syntheyes_ver)        
 
     def pre_app_init(self):
         """
@@ -168,7 +147,7 @@ class SynthEyesEngine(Engine):
                 self.qt_app.setQuitOnLastWindowClosed(True)            
                 self.qt_app.setWindowIcon(QtGui.QIcon(os.path.join(res_dir, "process_icon_256.png")))
                 self.qt_app.setApplicationName(sys.argv[0])
-        except Exception as e:
+        except:
             msg = "Could not create PySide app" if creating_qt_app else "Could not access PySide app"
             self.logger.exception(msg)
             raise sgtk.TankError(msg)
@@ -177,6 +156,14 @@ class SynthEyesEngine(Engine):
         """
         Called when all apps have been initialized
         """
+        # Store the "Open Log Folder" command as it may be lost after the first context switch for some reason.
+        # The same issue seems to be present in tk-substancepainter
+        cmds = self.commands
+        if "Open Log Folder" in cmds:
+            self._open_log_folder = [("Open Log Folder", cmds["Open Log Folder"])]
+        elif hasattr(self, "_open_log_folder"):
+            self.commands.update(self._open_log_folder)
+
         # Create UI panel for toolkit
         from tk_syntheyes.ui.main_window import MainWindow
 
@@ -190,8 +177,23 @@ class SynthEyesEngine(Engine):
             self.ui: MainWindow
             self.ui._engine = self
             self.ui.console.connect_to_engine(self.ui._engine)
-            self.ui.regenerate_panels()
+            #self.ui.regenerate_panels()
         self.init_heartbeat()
+
+    def post_context_change(self, old_context, new_context):
+        """
+        Runs after a context change. The Substance Painter event watching will 
+        be stopped and new callbacks registered containing the new context 
+        information.
+
+        :param old_context: The context being changed away from.
+        :param new_context: The new context being changed to.
+        """
+        # Re-add the "Open Log Folder" command since it may have been lost after the first context switch for some reason.
+        # The same issue seems to be present in tk-substancepainter
+        if hasattr(self, "_open_log_folder"):
+            self.commands.update(self._open_log_folder)
+        self.ui.regenerate_panels()
 
     def init_heartbeat(self):
         """
@@ -311,28 +313,32 @@ class SynthEyesEngine(Engine):
 
     def save_session(self):
         try:
-            self._hlev.Scene().Call("Save", self._hlev.SNIFileName())
-            self._hlev.ClearChanged()
+            hlev = self.get_syntheyes_connection()
+            hlev.Scene().Call("Save", hlev.SNIFileName())
+            hlev.ClearChanged()
         except Exception as e:
             self.log_error("Could not save current SynthEyes session file.\n%s", e)
 
     def save_session_as(self, path: str):
         try:
-            self._hlev.SetSNIFileName(path)
-            self._hlev.Scene().Call("Save", path)
-            self._hlev.ClearChanged()
+            hlev = self.get_syntheyes_connection()
+            hlev.SetSNIFileName(path)
+            hlev.Scene().Call("Save", path)
+            hlev.ClearChanged()
         except Exception as e:
             self.log_error("Error during saving to %s\n%s", path, e)
 
     def get_session_path(self):
         try:
-            return self._hlev.SNIFileName()
+            hlev = self.get_syntheyes_connection()
+            return hlev.SNIFileName()
         except Exception as e:
             self.log_error("Error accessing the file path\n%s", e)
         return None
     
     def get_syntheyes_connection(self) -> SyPy3.sylevel.SyLevel:
-        if self._hlev is None or not self._hlev.core.OK():
+        hlev = getattr(self, "_hlev", None)
+        if hlev is None or not hlev.core.OK():
             self._hlev = SyPy3.SyLevel()
             if not self._hlev.OpenExisting(self._port, self._pin):
                 raise Exception("Connection to SynthEyes can not be established. Make sure there is a running SynthEyes instance that was launched via ShotGrid.")
@@ -340,11 +346,12 @@ class SynthEyesEngine(Engine):
         return self._hlev
     
     def get_syntheyes_hwnd(self):
-        return int(self._hlev.Main().HWND(), 16)
+        hlev = self.get_syntheyes_connection()
+        return int(hlev.Main().HWND(), 16)
     
     def prompt_to_close_popup(self):
         from sgtk.platform.qt import QtCore, QtGui
-        
+
         # check if a popup that might interfere with the reset is still open and ask the user to close it first
         hlev = self.get_syntheyes_connection()
         self.ui.suppress()

@@ -1,5 +1,6 @@
 from engine import SynthEyesEngine
 
+
 class InbuiltApp(object):
     @property
     def display_name(self):
