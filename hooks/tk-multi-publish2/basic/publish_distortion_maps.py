@@ -9,11 +9,8 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
-import re
-import sgtk
-import shutil
-from pathlib import Path
 
+import sgtk
 from engine import SynthEyesEngine
 
 HookBaseClass = sgtk.get_hook_baseclass()
@@ -230,7 +227,11 @@ class SyntheyesDistortionMapsPublishPlugin(HookBaseClass):
             raise Exception(error_msg)
 
         # resolve undistort and redistort template strings
-        for template_id, prop_name in {"Undistort Template" : "undistort_name", "Redistort Template": "redistort_name"}.items():
+        distort_template_names = {
+            "Undistort Template": "undistort_name",
+            "Redistort Template": "redistort_name"
+        }
+        for template_id, prop_name in distort_template_names.items():
             distort_template = publisher.get_template_by_name(settings[template_id].value)
             missing_keys = distort_template.missing_keys(work_fields)
             if missing_keys:
@@ -296,9 +297,12 @@ class SyntheyesDistortionMapsPublishPlugin(HookBaseClass):
                 # adjust the preferences
                 hlev.BeginPref()
                 try:
-                    for pref, value in export_prefs.items(): prefs.Set(pref, value)
-                except Exception as e: raise e
-                finally: hlev.AcceptPref()
+                    for pref, value in export_prefs.items():
+                        prefs.Set(pref, value)
+                except:
+                    raise
+                finally:
+                    hlev.AcceptPref()
 
                 # export maps on first frame of the shot
                 frame = hlev.Frame()
@@ -311,9 +315,12 @@ class SyntheyesDistortionMapsPublishPlugin(HookBaseClass):
                 # restore the user's preferences
                 hlev.BeginPref()
                 try:
-                    for pref, value in pref_cache.items(): prefs.Set(pref, value)
-                except Exception as e: raise e
-                finally: hlev.AcceptPref()
+                    for pref, value in pref_cache.items():
+                        prefs.Set(pref, value)
+                except:
+                    raise
+                finally:
+                    hlev.AcceptPref()
 
                 break
 

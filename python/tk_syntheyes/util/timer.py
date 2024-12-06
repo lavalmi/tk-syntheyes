@@ -1,5 +1,6 @@
 import time
 
+
 class Timer():
     def __init__(self, sleep, timeout):
         self._time = 0

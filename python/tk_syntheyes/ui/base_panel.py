@@ -1,8 +1,9 @@
+from PySide2.QtCore import QSize, Qt
+from PySide2.QtGui import QIcon
+from PySide2.QtWidgets import (QFrame, QPushButton, QSizePolicy, QToolButton,
+                               QWidget)
 from tk_syntheyes.ui.ui_base_panel import Ui_BasePanel
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
 
 class BasePanel(QWidget, Ui_BasePanel):
     def __init__(self, parent=None):

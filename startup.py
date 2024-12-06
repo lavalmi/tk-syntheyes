@@ -12,7 +12,7 @@ import os
 import sys
 
 import sgtk
-from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
+from sgtk.platform import LaunchInformation, SoftwareLauncher
 
 
 class SynthEyesLauncher(SoftwareLauncher):

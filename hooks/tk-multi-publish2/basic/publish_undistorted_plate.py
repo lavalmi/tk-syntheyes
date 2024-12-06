@@ -8,11 +8,11 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-import os
 import glob
-import sgtk
+import os
 import time
 
+import sgtk
 from engine import SynthEyesEngine
 
 HookBaseClass = sgtk.get_hook_baseclass()
@@ -283,15 +283,19 @@ class SyntheyesUndistortedPlatePublishPlugin(HookBaseClass):
             
             # 3. load custom prepset
             shot.Call("LoadPrepSetsFromFile", 1, prepset_path)
-        except Exception as e: raise e
-        finally: hlev.AcceptShotChanges(shot, first_undo_block)
+        except:
+            raise
+        finally:
+            hlev.AcceptShotChanges(shot, first_undo_block)
 
         # 4. set the active object to the correct camera
         hlev.Begin()
         try:
             hlev.SetActive(camera)
-        except Exception as e: raise e
-        finally: hlev.Accept("Set " + camera.Name() + " active")
+        except:
+            raise
+        finally:
+            hlev.Accept("Set " + camera.Name() + " active")
 
         # 5. Open 'Save Sequence' via the main menu and configure the export
         # Due to "Bad Tpye"-Errors when accessing most prepset-related variables, there 

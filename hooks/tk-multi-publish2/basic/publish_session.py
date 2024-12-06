@@ -9,10 +9,8 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
-import sgtk
-import SyPy3
 
-from tank_vendor import six
+import sgtk
 from engine import SynthEyesEngine
 
 HookBaseClass = sgtk.get_hook_baseclass()

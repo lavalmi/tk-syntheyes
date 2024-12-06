@@ -9,15 +9,14 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
-import sgtk
 import shutil
 import time
-
 from pathlib import Path
 
+import sgtk
+import SyPy3
 from engine import SynthEyesEngine
 from tk_syntheyes.util.stoppable_thread import StoppableThread
-import SyPy3
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -254,14 +253,6 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
             self.logger.error(error_msg, extra=_get_save_as_action())
             raise Exception(error_msg)
 
-        # ---- check if the session contains unsaved changes
-        #if hlev.HasChanged():
-        #    error_msg = "The SynthEyes session has unsaved changes. Make sure to save your file first."
-        #    self.logger.error(
-        #        error_msg,
-        #        extra=_get_save_action(),
-        #    )
-        #    raise Exception(error_msg)
 
         item.properties["publish_type"] = settings["publish_type"].value
         template_name = settings["publish_template"].value
@@ -473,34 +464,16 @@ def _get_save_as_action():
         }
     }
 
-def _get_save_action():
-    """
-    Simple helper for returning a log action dict for saving unsaved changes in the current session
-    """
-
-    engine: SynthEyesEngine = sgtk.platform.current_engine()
-    callback = engine.save_session
-
-    return {
-        "action_button": {
-            "label": "Save",
-            "tooltip": "Save unsaved changes",
-            "callback": callback
-        }
-    }
-
 class SuppressWarningsThread(StoppableThread):
-    def __init__(self, engine, *args, **kwargs):
+    def __init__(self, engine, update_rate, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self._hlev = SyPy3.SyLevel()
-        self._connected = self._hlev.OpenExisting(engine._port, engine._pin)
+        self._engine = engine
+        self._update_rate = update_rate
       
     def run(self):
-        if not self._connected:
-            return
+        hlev = self._engine.get_syntheyes_connection()
         
         while not self.stopped():
-            if self._hlev.Popup().IsValid():
-                self._hlev.Popup().CloseAndWait()
-            time.sleep(0.016)
+            if hlev.Popup().IsValid():
+                hlev.Popup().CloseAndWait()
+            time.sleep(self._update_rate)

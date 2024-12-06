@@ -1,6 +1,6 @@
-import SyPy3
 from SyPy3.sylevel import SyLevel
 from SyPy3.syobj import SyObj
+
 
 def prepare(engine, settings, item):
     """
@@ -32,8 +32,10 @@ def prepare(engine, settings, item):
         for tracker in obj.Trackers():
             tracker.Set("isExported", tracker.obj and tracker.obj.uniqueID == item_unique_id)
     
-    except Exception as e: raise e
-    finally: hlev.Accept("Prepare Export")
+    except:
+        raise
+    finally:
+        hlev.Accept("Prepare Export")
         
 #def export(engine, settings, item):
     #"""
