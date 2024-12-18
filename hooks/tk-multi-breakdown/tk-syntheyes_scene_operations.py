@@ -92,8 +92,8 @@ class BreakdownSceneOperations(HookBaseClass):
                         hlev.Begin()
                         try:
                             obj.Call("readMesh", new_path)
-                        except: raise
                         finally: hlev.Accept("Update: {}".format(node_name))
+                        except: raise
 
     def find_node(self, node_name):
         engine: SynthEyesEngine = self.parent.engine

@@ -254,7 +254,6 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
             self.logger.error(error_msg, extra=_get_save_as_action())
             raise Exception(error_msg)
 
-
         item.properties["publish_type"] = settings["publish_type"].value
         template_name = settings["publish_template"].value
         publish_template = publisher.get_template_by_name(template_name)

@@ -35,8 +35,10 @@ class BasePanel(QWidget, Ui_BasePanel):
         #if self.gridLayout.rowCount() - 1 > row:
         self.update_spacers()
 
-    def insert_button(self, icon:QIcon=None, text="", row=-1, callback=None):
+    def insert_button(self, icon:QIcon=None, text="", tooltip=None, row=-1, callback=None):
         btn = QPushButton(icon, text, self)
+        if tooltip:
+            btn.setToolTip(tooltip)
         btn.setText(text)
         if callback:
             btn.clicked.connect(callback)
@@ -48,7 +50,7 @@ class BasePanel(QWidget, Ui_BasePanel):
             self.update_preferred_width()
         return btn
     
-    def insert_menu_button(self, panel, icon:QIcon=None, row=-1, is_back_button=False):
+    def insert_menu_button(self, panel, icon:QIcon=None, tooltip=None, row=-1, is_back_button=False):
         if is_back_button and self._btn_back:
             return self._btn_back
         
@@ -57,7 +59,7 @@ class BasePanel(QWidget, Ui_BasePanel):
 
         right = self.panel_depth <= panel.panel_depth        
         self.insert_menu_indicator(right, row)
-        btn = self.insert_button(icon, "Back" if is_back_button else panel.name, row)
+        btn = self.insert_button(icon, "Back" if is_back_button else panel.name, tooltip, row)
         
         if is_back_button:
             self._btn_back = btn
