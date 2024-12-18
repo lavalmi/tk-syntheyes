@@ -9,8 +9,6 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import sgtk
-import SyPy3.symenu
-import SyPy3.sywin
 from engine import SynthEyesEngine
 
 HookClass = sgtk.get_hook_baseclass()

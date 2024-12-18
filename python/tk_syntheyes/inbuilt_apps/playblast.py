@@ -13,34 +13,57 @@ class PlayblastInbuiltApp(InbuiltApp):
 
     @property
     def display_name(self):
-        return "Playblast"
+        return "Playblast (Fl. Persp.)"
     
     @property
     def description(self):
-        return ""
+        return """
+        Manages rendering playblasts via SynthEyes' view 'Floating Perspective'.
+        Before starting any playblast, configure the view's display settings as these will affect the output.
+        """
         
     @property
     def commands(self):
         return {
-            "Playblast (Fl. Persp.)":
+            "Playblast":
             {
                 "callback": self.playblast,
                 "properties": {
                     "app": self,
-                    "description": "Render a playblast via the 'Render Preview'-function"
-                                   "in the SynthEyes' view 'Floating Perspective'.",
+                    "description": "Render a playblast via the 'Render Preview'-function "
+                                   "in the SynthEyes' view 'Floating Perspective'.\n"
+                                   "During the rendering process, the display-specific settings of the "
+                                   "image preprocessor are reset to ensure that colors are not altered.\n"
+                                   "Warning: This will cause SynthEyes to clear the image cache.",
                     "environment": ["asset_step", "element_step", "shot_step"]
                 }
-            }
+            },
+            "Playblast (No Reset)":
+            {
+                "callback": self.playblast_no_reset,
+                "properties": {
+                    "app": self,
+                    "description": "Render a playblast via the 'Render Preview'-function "
+                                   "in the SynthEyes' view 'Floating Perspective' without "
+                                   "affecting the image preprocessor.",
+                    "environment": ["asset_step", "element_step", "shot_step"]
+                }
+            },
         }
 
     def __init__(self, engine: SynthEyesEngine):
         super().__init__(engine)
 
     def playblast(self):
+        self._playblast(True)
+
+    def playblast_no_reset(self):
+        self._playblast(False)
+
+    def _playblast(self, reset_prepset):
         hlev = self.engine.get_syntheyes_connection()
         ui = self.engine.ui
-        
+
         if "tk-multi-publish2" not in self.engine.apps:
             ui.message_box(
                 QMessageBox.Critical,
@@ -73,8 +96,7 @@ class PlayblastInbuiltApp(InbuiltApp):
                 return
 
         timer = Timer(0.033, 5)
-        first_undo_block = "Prepare SGTK Playblast"
-        reached_first_undo = False
+        first_undo_block = None
         try:
             active_cam = hlev.Active().cam
             shot = active_cam.shot
@@ -101,36 +123,38 @@ class PlayblastInbuiltApp(InbuiltApp):
             else:
                 os.makedirs(dir)
 
-            prepset_name = "sgtk_render_playblast"
-            prepset_path = os.path.abspath(os.path.join(self.engine.disk_location, "prepsets", prepset_name + ".prp"))
-            hlev.BeginShotChanges(shot)
-            try:
-                # 1. disable resampling in preprocessor
-                live.stabilizeMode = float(int(live.stabilizeMode) & ~128)
-                live.Call("MakeStabilizeReference")
-                        
-                # 2. load custom prepset
-                shot.Call("LoadPrepSetsFromFile", 1, prepset_path)
-            except:
-                raise
-            finally:
-                hlev.AcceptShotChanges(shot, first_undo_block)
-                reached_first_undo = True
+            if reset_prepset:
+                prepset_name = "sgtk_render_playblast"
+                prepset_path = os.path.abspath(os.path.join(self.engine.disk_location, "prepsets", prepset_name + ".prp"))
+                hlev.BeginShotChanges(shot)
+                try:
+                    # 1. disable resampling in preprocessor
+                    live.stabilizeMode = float(int(live.stabilizeMode) & ~128)
+                    live.Call("MakeStabilizeReference")
+                            
+                    # 2. load custom prepset
+                    shot.Call("LoadPrepSetsFromFile", 1, prepset_path)
+                except Exception as e: raise e
+                finally:
+                    undo_block_name = "Prepare SGTK Playblast"
+                    if not first_undo_block:
+                        first_undo_block = undo_block_name
+                    hlev.AcceptShotChanges(shot, undo_block_name)
 
-            # 3. open preprocessor to set the active prepset; 
-            # This is a workaround due to the bad type error when directly accessing prepsets from code.
-            # If this issue can be resolved, the code here can be improved, but for now this works fine.
-            hlev.PerformActionByIDAndContinue(40147) # Shot > Image Preprocessor
+                # 3. open preprocessor to set the active prepset; 
+                # This is a workaround due to the bad type error when directly accessing prepsets from code.
+                # If this issue can be resolved, the code here can be improved, but for now this works fine.
+                hlev.PerformActionByIDAndContinue(40147) # Shot > Image Preprocessor
 
-            # wait for preprocessor to open
-            timer.reset()
-            while hlev.Popup().Name() != "Image Preprocessor": # Image Preprocessor
-                timer.sleep("Error: Timeout while waiting for Image Preprocessor to open.")
+                # wait for preprocessor to open
+                timer.reset()
+                while hlev.Popup().Name() != "Image Preprocessor": # Image Preprocessor
+                    timer.sleep("Error: Timeout while waiting for Image Preprocessor to open.")
 
-            img_proc = hlev.Popup()
-            img_proc.ByID(1400).SetOption(prepset_name) # prepset dropdown; will be reverted via the undo later
+                img_proc = hlev.Popup()
+                img_proc.ByID(1400).SetOption(prepset_name) # prepset dropdown; will be reverted via the undo later
 
-            img_proc.ByID(1).ClickAndWait() # OK
+                img_proc.ByID(1).ClickAndWait() # OK
 
             # 4. hide all other cameras and clear the selection to prevent them from showing up in the playblast
             hlev.Begin()
@@ -139,10 +163,12 @@ class PlayblastInbuiltApp(InbuiltApp):
                     if cam != active_cam:
                         cam.show = False
                 hlev.ClearSelection()
-            except:
-                raise
+            except Exception as e: raise e
             finally:
-                hlev.Accept("Hide other Cameras")
+                undo_block_name = "Hide Other Cameras"
+                if not first_undo_block:
+                    first_undo_block = undo_block_name
+                hlev.Accept(undo_block_name)
 
             # 5. open floating perspective if not already present            
             window_title = "Perspective Window"
@@ -223,8 +249,8 @@ class PlayblastInbuiltApp(InbuiltApp):
                 QMessageBox.Abort
             )
             return
-        finally:
-            if reached_first_undo:
+        finally: 
+            if first_undo_block:
                 self._undo_playblast_changes(first_undo_block)
 
         ui.message_box(

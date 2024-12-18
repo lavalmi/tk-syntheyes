@@ -236,8 +236,9 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
         publisher = self.parent
         engine: SynthEyesEngine = publisher.engine
         hlev = engine.get_syntheyes_connection()
-        
-        if (popup := hlev.Popup()).IsValid():
+
+        popup = hlev.Popup()
+        if popup.IsValid():
             error_msg = "A popup \"{}\" is currently open in SynthEyes, which might interfere with the publishing. Close the popup first and retry.".format(popup.Name())
             self.logger.error(error_msg)
             raise Exception(error_msg)  
@@ -252,7 +253,6 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
             error_msg = "The SynthEyes session has not been saved."
             self.logger.error(error_msg, extra=_get_save_as_action())
             raise Exception(error_msg)
-
 
         item.properties["publish_type"] = settings["publish_type"].value
         template_name = settings["publish_template"].value
