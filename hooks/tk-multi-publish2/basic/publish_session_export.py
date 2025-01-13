@@ -465,15 +465,24 @@ def _get_save_as_action():
     }
 
 class SuppressWarningsThread(StoppableThread):
-    def __init__(self, engine, update_rate, *args, **kwargs):
+    def __init__(self, update_rate, port, pin, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._engine = engine
+
         self._update_rate = update_rate
+        
+        # NOTE: important to create a new connection here as this is a separate thread;
+        # Otherwise might result in unexpected behaviour due to race conditions
+        self._hlev = SyPy3.SyLevel()
+        self._connected = self._hlev.OpenExisting(port, pin)
       
     def run(self):
-        hlev = self._engine.get_syntheyes_connection()
+        if not self._connected:
+            return
         
         while not self.stopped():
-            if hlev.Popup().IsValid():
-                hlev.Popup().CloseAndWait()
+            if self._hlev.Popup().IsValid():
+                self._hlev.Popup().CloseAndWait()
             time.sleep(self._update_rate)
+            
+        self._connected = False
+        self._hlev.Close()
