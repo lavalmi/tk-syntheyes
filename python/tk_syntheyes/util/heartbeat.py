@@ -18,9 +18,10 @@ from engine import SynthEyesEngine
 
 class Heartbeat(object):
 
-    def __init__(self, engine, logger):
+    def __init__(self, engine: SynthEyesEngine, logger):
         self._logger: logging.Logger = logger
         self._engine: SynthEyesEngine = engine
+        self._hlev = self._engine.get_new_syntheyes_connection()
         self._stop = False
         self._running = False
         self._shutdown_on_exit = False
@@ -43,17 +44,18 @@ class Heartbeat(object):
     def heartbeat_thread_run(self):
         self._running = True
         self._logger.info("Heartbeat: Started")
+        
         error_cycle = 0
         syntheyes_closed = False
         while not self._stop:
             time.sleep(self.interval)
             
             # Increment error count or reset if one update successfully went through
-            if not self._engine.check_connection():
+            if not SynthEyesEngine.check_connection(self._hlev):
                 self._logger.error("Heartbeat: No connection.")
                 error_cycle += 1
                 if error_cycle >= self.tolerance:
-                    msg = "Python: Quitting. Heartbeat errors greater than tolerance."
+                    msg = "Python: Quitting. Too many consecutive Heartbeat errors."
                     self._logger.error(msg)
                     self._stop = True
                     syntheyes_closed = True
