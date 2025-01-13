@@ -394,7 +394,7 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
             hook.export(engine, settings, item)
         else:
             # open stoppable thread to suprress warnings/infos after export
-            thread = SuppressWarningsThread(engine)
+            thread = SuppressWarningsThread(0.016, engine)
             thread.start()
             self.logger.debug("Started suppress warnings thread")
 
@@ -465,15 +465,15 @@ def _get_save_as_action():
     }
 
 class SuppressWarningsThread(StoppableThread):
-    def __init__(self, update_rate, port, pin, *args, **kwargs):
+    def __init__(self, update_rate, engine: SynthEyesEngine, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._update_rate = update_rate
         
         # NOTE: important to create a new connection here as this is a separate thread;
         # Otherwise might result in unexpected behaviour due to race conditions
-        self._hlev = SyPy3.SyLevel()
-        self._connected = self._hlev.OpenExisting(port, pin)
+        self._hlev = engine.get_new_syntheyes_connection()
+        self._connected = True        
       
     def run(self):
         if not self._connected:

@@ -246,6 +246,15 @@ class SynthEyesEngine(Engine):
             return ok
         return False
 
+    @classmethod
+    def check_connection(self, hlev: SyPy3.sylevel.SyLevel):
+        if not hlev or not hlev.core or not hlev.core.OK():
+            return False
+        try:
+            return hlev.core.Send("sgtk::connection")
+        except:
+            return False
+
     @property
     def has_ui(self):
         """Return if SynthEyes' UI currently exists."""
@@ -349,12 +358,16 @@ class SynthEyesEngine(Engine):
         
         # Open new connection if current handle is faulty or non-existent
         if hlev is None or hlev.core is None:
-            self._hlev = SyPy3.SyLevel()
-            if not self._hlev.OpenExisting(self._port, self._pin):
-                raise Exception("Connection to SynthEyes can not be established. Make sure there is a running SynthEyes instance that was launched via ShotGrid.")
+            self._hlev = self.get_new_syntheyes_connection()
             
         return self._hlev
     
+    def get_new_syntheyes_connection(self) -> SyPy3.sylevel.SyLevel:
+        hlev = SyPy3.SyLevel()
+        if not hlev.OpenExisting(self._port, self._pin):
+            raise Exception("Connection to SynthEyes can not be established. Make sure there is a running SynthEyes instance that was launched via ShotGrid.")
+        return hlev
+
     def get_syntheyes_hwnd(self):
         hlev = self.get_syntheyes_connection()
         return int(hlev.Main().HWND(), 16)
