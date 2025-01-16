@@ -585,3 +585,39 @@ class SynthEyesEngine(Engine):
                 return True
         
         return False
+
+    def prompt_to_save_changes(self):
+        """
+        Opens a Qt dialog to allow the user to save unsaved changes if present.
+
+        :returns: False if the action was Canceled, True otherwise
+        """
+        from sgtk.platform.qt import QtCore, QtGui
+
+        hlev = self.get_syntheyes_connection()
+        
+        if hlev.HasChanged():
+            yes = QtGui.QMessageBox.Yes
+            no = QtGui.QMessageBox.No
+            cancel = QtGui.QMessageBox.Cancel
+            try:
+                QtGui.QApplication.setOverrideCursor(QtCore.Qt.ArrowCursor)
+                res = self.ui.message_box(
+                    QtGui.QMessageBox.Information,
+                    "Unsaved Changes",
+                    "The current scene has unsaved changes. Do you want to save before closing?",
+                    yes | no | cancel
+                )
+            except:
+                raise
+            finally:
+                QtGui.QApplication.restoreOverrideCursor()
+            
+            if res == yes:
+                self.save_session()
+            elif res == no:
+                pass
+            else:
+                return False
+        
+        return True
