@@ -12,6 +12,7 @@ import os
 
 import sgtk
 from engine import SynthEyesEngine
+from tk_syntheyes.util.undo import UndoPref
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -296,14 +297,9 @@ class SyntheyesDistortionMapsPublishPlugin(HookBaseClass):
                 pref_cache = {pref: prefs.Get(pref) for pref in export_prefs}
 
                 # adjust the preferences
-                hlev.BeginPref()
-                try:
+                with UndoPref(hlev, False):
                     for pref, value in export_prefs.items():
                         prefs.Set(pref, value)
-                except:
-                    raise
-                finally:
-                    hlev.AcceptPref()
 
                 # export maps on first frame of the shot
                 frame = hlev.Frame()
@@ -314,14 +310,9 @@ class SyntheyesDistortionMapsPublishPlugin(HookBaseClass):
                 hlev.SetFrame(frame)
 
                 # restore the user's preferences
-                hlev.BeginPref()
-                try:
+                with UndoPref(hlev, False):
                     for pref, value in pref_cache.items():
                         prefs.Set(pref, value)
-                except:
-                    raise
-                finally:
-                    hlev.AcceptPref()
 
                 break
 
