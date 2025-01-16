@@ -1,5 +1,7 @@
 from SyPy3.sylevel import SyLevel
 
+from tk_syntheyes.util.undo import Undo
+
 
 def prepare(engine, settings, item):
     """
@@ -12,13 +14,8 @@ def prepare(engine, settings, item):
     """
     hlev: SyLevel = engine.get_syntheyes_connection()
         
-    hlev.Begin()
-    try:
+    with Undo(hlev, "Prepare Export", False):
         pass
-    except:
-        raise
-    finally:
-        hlev.Accept("Prepare Export")
         
 #def export(engine, settings, item):
     #"""

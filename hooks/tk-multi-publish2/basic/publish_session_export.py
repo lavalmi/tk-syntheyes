@@ -17,6 +17,7 @@ import sgtk
 import SyPy3
 from engine import SynthEyesEngine
 from tk_syntheyes.util.stoppable_thread import StoppableThread
+from tk_syntheyes.util.undo import Undo
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -399,12 +400,10 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
             self.logger.debug("Started suppress warnings thread")
 
             # universally deactivate LiDAR-scans before exporting
-            hlev.Begin()
-            try:
+            with Undo(hlev, "Disable LiDAR", False):
                 for mesh in hlev.Meshes():
                     if os.path.splitext(mesh.file)[1].lower() == ".xyz":
                         mesh.isExported = False
-            finally: hlev.Accept("Disable LiDAR")
             
             # call SynthEyes' actual export function
             self.logger.info(msg)
