@@ -131,7 +131,7 @@ class PlayblastInbuiltApp(InbuiltApp):
                 with UndoShotChanges(hlev, undo_block_name, shot, False):
                     if not first_undo_block:
                         first_undo_block = undo_block_name
-
+            
                     # 1. disable resampling in preprocessor
                     live.stabilizeMode = float(int(live.stabilizeMode) & ~128)
                     live.Call("MakeStabilizeReference")
