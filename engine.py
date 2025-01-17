@@ -218,6 +218,7 @@ class SynthEyesEngine(Engine):
             self._heartbeat.join(True)
         hlev = self.get_syntheyes_connection()
         hlev.Close()
+        del hlev
 
     def change_context(self, new_context):
         context = self.context
@@ -237,9 +238,12 @@ class SynthEyesEngine(Engine):
 
     def check_connection(self):
         """Check the connection status of SynthEyes."""
+        # NOTE: Important to open a new connection here as the hlev does not update the OK status after connecting
         hlev = SyPy3.SyLevel()
         if hlev.OpenExisting(self._port, self._pin):
-            return hlev.core.OK()
+            ok = hlev.core.OK()
+            hlev.Close()
+            return ok
         return False
 
     @property
@@ -337,8 +341,14 @@ class SynthEyesEngine(Engine):
         return None
     
     def get_syntheyes_connection(self) -> SyPy3.sylevel.SyLevel:
-        hlev = getattr(self, "_hlev", None)
-        if hlev is None or not hlev.core.OK():
+        hlev: SyPy3.sylevel.SyLevel = getattr(self, "_hlev", None)
+        
+        # Close established connection if invalid
+        if hlev and hlev.core and not hlev.core.OK():
+            hlev.Close()
+        
+        # Open new connection if current handle is faulty or non-existent
+        if hlev is None or hlev.core is None:
             self._hlev = SyPy3.SyLevel()
             if not self._hlev.OpenExisting(self._port, self._pin):
                 raise Exception("Connection to SynthEyes can not be established. Make sure there is a running SynthEyes instance that was launched via ShotGrid.")
@@ -351,22 +361,23 @@ class SynthEyesEngine(Engine):
     
     def prompt_to_close_popup(self):
         from sgtk.platform.qt import QtCore, QtGui
-
+        
         # check if a popup that might interfere with the reset is still open and ask the user to close it first
         hlev = self.get_syntheyes_connection()
-        self.ui.suppress()
-
+        
         while True:
             popup = hlev.Popup()
+            name = popup.Name()
+            
             if not popup.IsValid():
                 break
+            self.ui.suppress()
             try:
                 QtGui.QApplication.setOverrideCursor(QtCore.Qt.ArrowCursor)
                 self.ui.message_box(
                     QtGui.QMessageBox.Critical,
                     "Popup detected",
-                    "A popup \"{}\" is currently open in SynthEyes, which might interfere with the current action. Close the popup first and then hit OK to proceed.".format(
-                        popup.Name()),
+                    "A popup \"{}\" is currently open in SynthEyes, which might interfere with the current action. Close the popup first and then hit OK to proceed.".format(name),
                     QtGui.QMessageBox.Ok
                 )
             finally:
