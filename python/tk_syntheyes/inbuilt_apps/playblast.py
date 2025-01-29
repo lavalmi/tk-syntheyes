@@ -21,7 +21,12 @@ class PlayblastInbuiltApp(InbuiltApp):
         Manages rendering playblasts via SynthEyes' view 'Floating Perspective'.
         Before starting any playblast, configure the view's display settings as these will affect the output.
         """
-        
+
+    @property
+    def author(self):
+        """Name of the app author."""
+        return "tk-syntheyes"
+
     @property
     def commands(self):
         return {
@@ -53,6 +58,7 @@ class PlayblastInbuiltApp(InbuiltApp):
 
     def __init__(self, engine: SynthEyesEngine):
         super().__init__(engine)
+        self.engine: SynthEyesEngine
 
     def playblast(self):
         self._playblast(True)
@@ -104,6 +110,25 @@ class PlayblastInbuiltApp(InbuiltApp):
             
             # get the file path to export to and clear the directory or cancel
             work_path = self._get_playblast_work_path(active_cam.Name())[0]
+            
+            # check if a version for this sequence already exists
+            version = self.engine.shotgun.find_one(
+                'Version',
+                [
+                    ['sg_path_to_frames', 'is', work_path]
+                ]
+            )
+
+            # if a version already exists, cancel the playblast
+            if version:
+                ui.message_box(
+                    QMessageBox.Critical,
+                    "Published Version",
+                    "A published version for this directory already exists. Version up and try again.",
+                    QMessageBox.Abort
+                )
+                return
+
             path = work_path % (shot.start + shot.frameMatchOffset)
             dir = os.path.dirname(path)
             if os.path.exists(dir):

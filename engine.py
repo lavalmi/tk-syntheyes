@@ -13,8 +13,12 @@ A SynthEyes engine for Shotgun Toolkit.
 
 """
 
+import importlib
+import importlib.util
+import inspect
 import logging
 import os
+import re
 import sys
 
 import sgtk
@@ -30,6 +34,31 @@ python_dir = os.path.join(parent_dir, "python")
 if python_dir not in sys.path:
     sys.path.insert(0, python_dir)
 
+from tk_syntheyes.inbuilt_app import InbuiltApp
+from helper_functions import load_module, rreload
+
+class InbuiltAppPackageFinder:
+    """
+    Custom finder for assisting the reloading process of active packages of inbuilt and user apps.
+    The finder will attempt to find the specs for modules that have been previously loaded.
+    The search is, however, limited to the modules in the set provided by the __init__ function.
+    """
+    def __init__(self, modules: set[str] = None):
+        self._modules = set()
+        if modules:
+            self._modules.update(modules)
+
+    def find_spec(self, fullname, path, target = None):
+        if fullname not in self._modules or not target or not hasattr(target, "__spec__") or fullname not in sys.modules:
+            return None
+        # NOTE: The previously loaded spec is reused here
+        # Alternatively the spec could be reloaded via its __file__ attribute and importlib.util.spec_from_file_location
+        return target.__spec__
+    
+    @property
+    def modules(self):
+        return self._modules
+    
 ###############################################################################################
 # The Tank SynthEyes engine
 
@@ -79,6 +108,134 @@ class SynthEyesEngine(Engine):
             pass
 
         return host_info
+
+    @property
+    def inbuilt_apps(self):
+        if getattr(self, "_inbuilt_apps", None):
+            return self._inbuilt_apps
+        
+        # Setup all paths where the engine will look for apps
+        # List[path, is_user_app, is_user_specific]
+        inbuilt_apps_paths = [
+            (os.path.abspath(os.path.join(os.path.dirname(__file__), "python", "tk_syntheyes", "inbuilt_apps")), False, False)
+        ]
+
+        user = getattr(self.context, "user", None)
+        user_name = "" if user is None else user.get("name", None)
+        
+        # Group all valid user module paths
+        module_paths = os.environ.get("SYNTHEYES_MODULE_PATH", "")
+        if module_paths:
+            module_path_list = module_paths.split(";")
+            for module_path in module_path_list:                
+                if not self._is_valid_user_path(module_path):
+                    continue
+                inbuilt_apps_paths.append((module_path, True, False))
+                
+                # Add dedicated user folder that is only loaded for this user
+                if not user_name:
+                    continue
+                module_path = os.path.join(module_path, user_name)
+                if self._is_valid_user_path(module_path):
+                    inbuilt_apps_paths.append((module_path, True, True))
+
+
+        valid_chars = re.compile('[\W]+') # Regex pattern to filter undesired characters -> only A-Z, a-z, 0-9, _
+        valid_pckgs = set()
+        self._inbuilt_apps = {}
+        for inbuilt_apps_path, is_user_path, is_user_specific in inbuilt_apps_paths:
+            if not os.path.isdir(inbuilt_apps_path) or (is_user_path and not self._check_init_file(inbuilt_apps_path)):
+                continue
+            
+            # Load the current user path as a package for all the corresponding apps to reside in.
+            # That way, potential namespace collisions should be avoidable and this simultaneously allows the use of relative imports in the imported modules.
+            pckg_pre = "user" if is_user_path else "inbuilt"
+            
+            if is_user_specific:
+                pckg_name = f"{pckg_pre}_{os.path.basename(os.path.dirname(inbuilt_apps_path))}_{os.path.basename(inbuilt_apps_path)}"
+            else:
+                pckg_name = f"{pckg_pre}_{os.path.basename(inbuilt_apps_path)}"
+            pckg_name = valid_chars.sub('', pckg_name)
+
+            # Load package module
+            package_mod = load_module(pckg_name, os.path.join(inbuilt_apps_path, "__init__.py"), True, submodule_search_locations = [], logger = self.logger)
+            if not package_mod:
+                continue
+
+            module_prefix = pckg_name + "."
+
+            # Load all python modules aka files that contain an InbuiltApp subclass and import them into the new package
+            for file in os.listdir(inbuilt_apps_path):
+                if file == "__init__.py" or not file.endswith(".py"):
+                    continue
+
+                file_path = os.path.join(inbuilt_apps_path, file)
+                if not os.path.isfile(file_path):
+                    continue
+
+                mod = load_module(module_prefix + file.rsplit('.', 1)[0], file_path, True, True, logger = self.logger)
+                if not mod:
+                    continue
+
+                # iterate over all classes
+                for cls_name, cls in inspect.getmembers(mod, inspect.isclass):
+                    if cls != InbuiltApp and issubclass(cls, InbuiltApp):
+                        ins = cls(self)
+                        ins._is_user_app = is_user_path
+                        self._inbuilt_apps[cls_name] = ins
+                        valid_pckgs.add(pckg_name)
+
+        self._update_inbuilt_app_finder(valid_pckgs)
+        return self._inbuilt_apps
+
+    def _clear_inbuilt_apps(self):
+        if hasattr(self, "_inbuilt_apps"):
+            del self._inbuilt_apps
+        self._update_inbuilt_app_finder(None)
+
+    def _update_inbuilt_app_finder(self, modules: set[str]) -> InbuiltAppPackageFinder:
+        finder: InbuiltAppPackageFinder = getattr(self, "_inbuilt_app_finder", None)
+        empty = not modules or len(modules)
+        if finder:
+            if empty:
+                finder.modules.clear()
+                finder.modules.update(modules)
+                return finder
+            else:
+                if finder in sys.meta_path:
+                    sys.meta_path.remove(finder)
+                del self._inbuit_app_finder
+                return None
+        elif empty:
+            finder = self._inbuit_app_finder = InbuiltAppPackageFinder(modules)
+            sys.meta_path.append(finder)
+            return finder
+        
+        return None
+
+    @staticmethod
+    def _is_valid_user_path(path):
+        if not os.path.isdir(path):
+            return False
+
+        # Check that no invalid __init__.py file is present
+        init = os.path.join(path, "__init__.py")
+        if os.path.exists(init) and not os.path.isfile(init):
+            return False
+        
+        return True
+    
+    @staticmethod
+    def _check_init_file(path):
+        """Check if an __init__.py file exists in the target directory :path:.
+        returns: True if an __init__.py file exists, False otherwise
+        """
+        if not os.path.isdir(path):
+            return False
+        init_path = os.path.join(path, "__init__.py")
+        if os.path.exists(init_path) and os.path.isfile(init_path):
+            return True
+        return False
 
     ##########################################################################################
     # init and destroy
@@ -177,7 +334,7 @@ class SynthEyesEngine(Engine):
             self.ui: MainWindow
             self.ui._engine = self
             self.ui.console.connect_to_engine(self.ui._engine)
-            #self.ui.regenerate_panels()
+            self.ui.regenerate_panels()
         self.init_heartbeat()
 
     def post_context_change(self, old_context, new_context):
@@ -223,11 +380,6 @@ class SynthEyesEngine(Engine):
     def change_context(self, new_context):
         context = self.context
         super().change_context(new_context)
-        if context == new_context:
-            return
-        
-        # Call update function to reflect the context change in the UI
-        self.ui.regenerate_panels()
     
     def _get_dialog_parent(self):
         """
