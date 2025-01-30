@@ -11,10 +11,9 @@
 # log console
 import logging
 
-from .util import callback_event
-
-from sgtk.platform.qt import QtGui
-from sgtk.platform.qt import QtCore
+import sgtk
+from PySide2 import QtCore, QtWidgets
+from tk_syntheyes.util import callback_event
 
 COLOR_MAP = {
     'CRITICAL': 'indianred',
@@ -51,13 +50,13 @@ class QtLogHandler(logging.Handler):
                                            "<pre>%s</pre>" % message)
 
 
-class LogConsole(QtGui.QWidget):
+class LogConsole(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super(LogConsole, self).__init__(parent)
 
         self.setWindowTitle('Shotgun SynthEyes Logs')
-        self.layout = QtGui.QVBoxLayout(self)
-        self.logs = QtGui.QPlainTextEdit(self)
+        self.layout = QtWidgets.QVBoxLayout(self)
+        self.logs = QtWidgets.QPlainTextEdit(self)
         self.layout.addWidget(self.logs)
 
         # configure the text widget
@@ -69,6 +68,19 @@ class LogConsole(QtGui.QWidget):
                                          "tk-syntheyes.log_console")
         self.resize(self.settings.value("size", QtCore.QSize(800, 400)))
 
+    def connect_to_engine(self, engine):
+        try:
+            log_handler = getattr(self, "_log_handler", None)
+            if log_handler:
+                if log_handler in engine.logger.handlers:
+                    engine.logger.removeHandler(log_handler)
+                del log_handler
+            self._log_handler = QtLogHandler(self.logs)
+            engine.logger.addHandler(self._log_handler)
+        except:
+            msg = "Could not create logging console"
+            engine.logger.exception(msg)
+            raise sgtk.TankError(msg)
 
     def closeEvent(self, event):
         self.settings.setValue("size", self.size())

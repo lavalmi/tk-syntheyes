@@ -11,9 +11,9 @@
 import os
 
 import sgtk
-
-from SyPy3.syobj import SyObj
 from engine import SynthEyesEngine
+from SyPy3.syobj import SyObj
+from tk_syntheyes.util.undo import Undo
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -90,11 +90,8 @@ class BreakdownSceneOperations(HookBaseClass):
                 if node_type == "MESH":
                     obj: SyObj = hlev.FindMeshByName(node_name)
                     if obj:
-                        hlev.Begin()
-                        try:
-                            obj.Call("readMesh", new_path)
-                        except Exception as e: raise e
-                        finally: hlev.Accept("Update: {}".format(node_name))
+                        with Undo(hlev, "Update: {}".format(node_name)):
+                            obj.Call("ReadMesh", new_path)
 
     def find_node(self, node_name):
         engine: SynthEyesEngine = self.parent.engine
@@ -102,8 +99,5 @@ class BreakdownSceneOperations(HookBaseClass):
         
         obj: SyObj = hlev.FindMeshByName(node_name)
         if obj:
-            hlev.Begin()
-            try:
+            with Undo(hlev, "Find: {}".format(node_name)):
                 hlev.Select1Object(obj)
-            except Exception as e: raise e
-            finally: hlev.Accept("Find: {}".format(node_name))

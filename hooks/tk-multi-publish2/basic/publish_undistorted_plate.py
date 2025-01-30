@@ -8,12 +8,13 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-import os
 import glob
-import sgtk
+import os
 import time
 
+import sgtk
 from engine import SynthEyesEngine
+from tk_syntheyes.util.undo import Undo, UndoShotChanges
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -272,8 +273,7 @@ class SyntheyesUndistortedPlatePublishPlugin(HookBaseClass):
         first_undo_block = "Prepare undistorted export"
         prepset_name = "sgtk_undistort_plate"
         prepset_path = os.path.abspath(os.path.join(self.disk_location, os.pardir, "prepsets", prepset_name + ".prp"))
-        hlev.BeginShotChanges(shot)
-        try:
+        with UndoShotChanges(hlev, first_undo_block, shot, False):
             # 1. disable resampling in preprocessor
             live.stabilizeMode = float(int(live.stabilizeMode) & ~128)
             live.Call("MakeStabilizeReference")
@@ -284,15 +284,10 @@ class SyntheyesUndistortedPlatePublishPlugin(HookBaseClass):
             
             # 3. load custom prepset
             shot.Call("LoadPrepSetsFromFile", 1, prepset_path)
-        except Exception as e: raise e
-        finally: hlev.AcceptShotChanges(shot, first_undo_block)
 
         # 4. set the active object to the correct camera
-        hlev.Begin()
-        try:
+        with Undo(hlev, f"Set {camera.Name()} active", False):
             hlev.SetActive(camera)
-        except Exception as e: raise e
-        finally: hlev.Accept("Set " + camera.Name() + " active")
 
         # 5. Open 'Save Sequence' via the main menu and configure the export
         # Due to "Bad Tpye"-Errors when accessing most prepset-related variables, there 

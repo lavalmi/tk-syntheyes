@@ -1,6 +1,8 @@
-import SyPy3
 from SyPy3.sylevel import SyLevel
 from SyPy3.syobj import SyObj
+
+from tk_syntheyes.util.undo import Undo
+
 
 def prepare(engine, settings, item):
     """
@@ -13,8 +15,7 @@ def prepare(engine, settings, item):
     """
     hlev: SyLevel = engine.get_syntheyes_connection()
         
-    hlev.Begin()
-    try:
+    with Undo(hlev, "Prepare Export", False):
         # disable export for all meshes and trackers
         for list in (hlev.Meshes(), hlev.Lights()):
             obj: SyObj
@@ -33,9 +34,6 @@ def prepare(engine, settings, item):
                 hlev.SetActive(obj)
                 for tracker in obj.Trackers():
                     hlev.Delete(tracker)
-        
-    except Exception as e: raise e
-    finally: hlev.Accept("Prepare Export")
         
 #def export(engine, settings, item):
     #"""

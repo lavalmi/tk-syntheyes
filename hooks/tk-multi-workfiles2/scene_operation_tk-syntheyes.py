@@ -9,17 +9,7 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import sgtk
-from sgtk.platform.qt import QtGui
-
 from engine import SynthEyesEngine
-import SyPy3
-import SyPy3.sywin
-from SyPy3.sywin import SyWin
-import SyPy3.symenu
-from SyPy3.symenu import SyMenu
-
-import os
-import time
 
 HookClass = sgtk.get_hook_baseclass()
 

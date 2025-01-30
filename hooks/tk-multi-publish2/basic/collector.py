@@ -10,14 +10,10 @@
 
 import glob
 import os
-import re
+
 import sgtk
-import SyPy3
-from SyPy3.syobj import SyObj
-from pathlib import Path
-
 from engine import SynthEyesEngine
-
+from SyPy3.syobj import SyObj
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -189,7 +185,8 @@ class SyntheyesSessionCollector(HookBaseClass):
         cams = hlev.Cameras()       
         obj: SyObj
         for obj in hlev.Objects():
-            if obj in cams: continue
+            if obj in cams:
+                continue
             
             scene_item = self.get_or_create_item_parent(obj.Name(), parent_icon_path, parent_item)
             item = scene_item.create_item("syntheyes.object_track", "Object Track", obj.Name())
@@ -215,7 +212,8 @@ class SyntheyesSessionCollector(HookBaseClass):
         # iterate over all cameras
         cam: SyObj
         for cam in hlev.Cameras():
-            if not cam.Trackers(): continue
+            if not cam.Trackers():
+                continue
             scene_item = self.get_or_create_item_parent(cam.Name(), icon_path, parent_item)
             cam_item = scene_item.create_item("syntheyes.camera_track", "Camera Track", cam.Name())
             cam_item.set_icon_from_path(icon_path)
@@ -322,7 +320,7 @@ class SyntheyesSessionCollector(HookBaseClass):
         path = sgtk.util.ShotgunPath.normalize(hlev.SNIFileName())
         work_template = parent_item.properties.get("work_template")
         work_fields = work_template.get_fields(path)
-        work_fields["playblast_extension"] = "jpg" #TODO add an option to select png or jpg
+        work_fields["playblast_extension"] = "jpg" #TODO maybe add an option to select png or jpg
         work_fields["SEQ"] = 9999
 
         icon_path = os.path.join(self.disk_location, os.pardir, "icons", "playblast.png")
@@ -331,12 +329,14 @@ class SyntheyesSessionCollector(HookBaseClass):
         for cam in hlev.Cameras():
             work_fields["syntheyes.export_name"] = cam.Name().replace(" ", "_")
             playblast_path = playblast_template.apply_fields(work_fields)
-            if not os.path.exists(os.path.dirname(playblast_path)): continue
+            if not os.path.exists(os.path.dirname(playblast_path)):
+                continue
 
             playblast_path = playblast_path.replace("9999", "*")
             self.logger.debug("Searching in: %s" % (playblast_path,))
             playblast_files = sorted(glob.glob(playblast_path))
-            if not len(playblast_files): continue
+            if not len(playblast_files):
+                continue
 
             # get first and last frame and see if they match the camera's shot
             first_frame = playblast_template.get_fields(playblast_files[0])["SEQ"]

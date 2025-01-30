@@ -1,8 +1,7 @@
-import os
-
-import SyPy3
 from SyPy3.sylevel import SyLevel
-from SyPy3.syobj import SyObj
+
+from tk_syntheyes.util.undo import Undo
+
 
 def prepare(engine, settings, item):
     """
@@ -15,8 +14,7 @@ def prepare(engine, settings, item):
     """
     hlev: SyLevel = engine.get_syntheyes_connection()
         
-    hlev.Begin()
-    try:
+    with Undo(hlev, "Prepare Export", False):
         hlev.SetActive(hlev.Objects()[0])
 
         # Delete all objects to avoid SnythEyes still exporting an empty group node for non-exportable moving objects
@@ -32,9 +30,6 @@ def prepare(engine, settings, item):
             if mesh.obj:
                 mesh.isExported = False
 
-    except Exception as e: raise e
-    finally: hlev.Accept("Prepare Export")
-        
 #def export(engine, settings, item):
     #"""
     #Executes specific export logic. If this function is implemented, the default export behaviour is not called.

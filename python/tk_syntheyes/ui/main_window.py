@@ -1,25 +1,35 @@
+import importlib
 import importlib.util
+import inspect
 import os
 import sys
 import time
-
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
-
-if __name__ == "__main__":
-    sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-
-sys.path.append(os.path.dirname(__file__))
-from ui_main_window import Ui_MainWindow
-from base_panel import BasePanel
-from tk_syntheyes.app_command import AppCommand
-from tk_syntheyes.inbuilt_app import InbuiltApp
-from engine import SynthEyesEngine
-
 from configparser import SafeConfigParser
 
+from engine import SynthEyesEngine
+from PySide2.QtCore import (Property, QEasingCurve, QEvent, QPropertyAnimation,
+                            QSize, Qt, Signal, Slot)
+from PySide2.QtGui import QCursor, QGuiApplication, QKeySequence
+from PySide2.QtWidgets import (QApplication, QBoxLayout, QLayout, QLayoutItem,
+                               QMainWindow, QMenuBar, QMessageBox, QPushButton,
+                               QVBoxLayout, QWidget)
+from tk_syntheyes import logging_console
+from tk_syntheyes.app_command import AppCommand
+from tk_syntheyes.inbuilt_app import InbuiltApp
+from tk_syntheyes.ui.base_panel import BasePanel
+from tk_syntheyes.ui.ui_main_window import Ui_MainWindow
+
+
 class MainWindow(QMainWindow, Ui_MainWindow):
+
+    _exit_signal = Signal()
+    
+    @Slot()
+    def _on_exit_signal(self):
+        self.exit()
+
+    def emit_exit_signal(self):
+        self._exit_signal.emit()
 
     def __init__(self, engine: SynthEyesEngine=None, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -29,6 +39,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._suppressed = False
 
         self._engine = engine
+        self.create_logging_console()
         self.click_pos = None
         self._menu_click_time = time.time()
         
@@ -37,6 +48,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._borderless = self.actionBorderless.isChecked
         self._config = SafeConfigParser()
         self._load_config()
+
+        # Setup exit signal
+        self._exit_signal.connect(self._on_exit_signal)
 
         # Setup window hints
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
@@ -89,6 +103,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.menubar.mouseDoubleClickEvent = self.menu_double_click_event
 
 
+    def create_logging_console(self):
+        self.console = logging_console.LogConsole(self)
+        self.console.connect_to_engine(self._engine)
+    
     def move_window(self, event):
         if not (self.click_pos is None or self.isMaximized() or self.isMinimized()):
             if event.buttons() == Qt.LeftButton:
@@ -210,28 +228,37 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     @property
     def inbuilt_apps(self):
-        if not getattr(self, "_inbuilt_apps", None):
-            self._inbuilt_apps = {}
-            inbuilt_apps_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "inbuilt_apps"))
-            if os.path.isdir(inbuilt_apps_path):
-                import importlib
-                import inspect
-                for file in os.listdir(inbuilt_apps_path):
-                    file_path = os.path.join(inbuilt_apps_path, file)
-                    if not os.path.isfile(file_path): continue
+        if getattr(self, "_inbuilt_apps", None):
+            return self._inbuilt_apps
+        
+        inbuilt_apps_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "inbuilt_apps"))
+        if not os.path.isdir(inbuilt_apps_path):
+            return {}
 
-                    spec = importlib.util.spec_from_file_location(file.rsplit(".", 1)[0], file_path)
-                    if not spec: continue
+        self._inbuilt_apps = {}
+        for file in os.listdir(inbuilt_apps_path):
+            file_path = os.path.join(inbuilt_apps_path, file)
+            if not os.path.isfile(file_path): 
+                continue
 
-                    self._engine.log_debug("Loading inbuilt app: %s", file)
-                    mod = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(mod)
-                    if not mod: continue
+            spec = importlib.util.spec_from_file_location(file.rsplit(".", 1)[0], file_path)
+            if not spec:
+                continue
 
-                    # iterate over all classes
-                    for cls_name, cls in inspect.getmembers(mod, inspect.isclass):
-                        if cls != InbuiltApp and issubclass(cls, InbuiltApp):
-                            self._inbuilt_apps[cls_name] = cls(self._engine)
+            self._engine.log_debug("Loading inbuilt app: %s", file)
+            mod = importlib.util.module_from_spec(spec)
+
+            if mod.__name__ in sys.modules:
+                importlib.reload(mod)
+
+            spec.loader.exec_module(mod)
+            if not mod: 
+                continue
+
+            # iterate over all classes
+            for cls_name, cls in inspect.getmembers(mod, inspect.isclass):
+                if cls != InbuiltApp and issubclass(cls, InbuiltApp):
+                    self._inbuilt_apps[cls_name] = cls(self._engine)
             
         return self._inbuilt_apps
 
@@ -343,7 +370,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 # get command description
                 description = command.properties.get("description")
                 # create new sub menu
-                sub_panel: BasePanel = self._init_panel(BasePanel, item_label, panel, False, False, False) #TODO Consider whether the sub panels should be added to the quick select or not
+
+                sub_panel: BasePanel = self._init_panel(BasePanel, item_label, panel, False, False, True) #TODO Consider whether the sub panels should be added to the quick select or not
+
                 self._link_panel(panel.insert_menu_button(sub_panel, tooltip=description), sub_panel)
                 panel = sub_panel
 
@@ -362,9 +391,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         layout = self.sca_quick_select_contents.layout()
         while layout.count() > 1:
             item: QLayoutItem = layout.takeAt(0)
-            if item: 
+            if item:
                 widget = item.widget()
-                if widget: 
+                if widget:
                     widget.deleteLater()
 
         for panel in self._panels:
@@ -614,11 +643,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             
   
     def open_logging_console(self):
-        app = QCoreApplication.instance()
-        win = app.property('tk-syntheyes.log_console')
-        win.setHidden(False)
-        win.activateWindow()
-        win.raise_()
+        self.console.show()
+        self.console.activateWindow()
+        self.console.raise_()
 
 
     def exit(self):
@@ -665,7 +692,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             os.makedirs(config_dir)
 
         ### Save UI state to config ###
-        if not self._config.has_section("UI"): 
+        if not self._config.has_section("UI"):
             self._config.add_section("UI")
         self._config.set("UI", "pos", "{},{}".format(self.x(), self.y()))
         self._config.set("UI", "size", "{},{}".format(self.width(), self.height()))
@@ -716,13 +743,3 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ######################
         
         return success
-
-################################################################################
-
-if __name__ == "__main__":
-    import sys
-    app = QApplication(sys.argv)
-
-    window = MainWindow()
-    window.show()
-    app.exec_()

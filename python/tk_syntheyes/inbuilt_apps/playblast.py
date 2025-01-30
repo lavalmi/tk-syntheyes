@@ -1,18 +1,13 @@
-import os
 import glob
+import os
 import time
-from threading import Thread
 
 import sgtk
-import SyPy3
-
 from engine import SynthEyesEngine
+from PySide2.QtWidgets import QMessageBox
 from tk_syntheyes.inbuilt_app import InbuiltApp
-
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
-
+from tk_syntheyes.util.timer import Timer
+from tk_syntheyes.util.undo import Undo, UndoShotChanges
 
 class PlayblastInbuiltApp(InbuiltApp):
 
@@ -40,7 +35,7 @@ class PlayblastInbuiltApp(InbuiltApp):
                                    "During the rendering process, the display-specific settings of the "
                                    "image preprocessor are reset to ensure that colors are not altered.\n"
                                    "Warning: This will cause SynthEyes to clear the image cache.",
-                    "environment": ["asset_step", "element_step", "shot_step"]
+                    "environment": ["asset_matchmove", "element_matchmove", "shot_matchmove"]
                 }
             },
             "Playblast (No Reset)":
@@ -51,7 +46,7 @@ class PlayblastInbuiltApp(InbuiltApp):
                     "description": "Render a playblast via the 'Render Preview'-function "
                                    "in the SynthEyes' view 'Floating Perspective' without "
                                    "affecting the image preprocessor.",
-                    "environment": ["asset_step", "element_step", "shot_step"]
+                    "environment": ["asset_matchmove", "element_matchmove", "shot_matchmove"]
                 }
             },
         }
@@ -131,20 +126,18 @@ class PlayblastInbuiltApp(InbuiltApp):
             if reset_prepset:
                 prepset_name = "sgtk_render_playblast"
                 prepset_path = os.path.abspath(os.path.join(self.engine.disk_location, "prepsets", prepset_name + ".prp"))
-                hlev.BeginShotChanges(shot)
-                try:
+
+                undo_block_name = "Prepare SGTK Playblast"
+                with UndoShotChanges(hlev, undo_block_name, shot, False):
+                    if not first_undo_block:
+                        first_undo_block = undo_block_name
+            
                     # 1. disable resampling in preprocessor
                     live.stabilizeMode = float(int(live.stabilizeMode) & ~128)
                     live.Call("MakeStabilizeReference")
                             
                     # 2. load custom prepset
                     shot.Call("LoadPrepSetsFromFile", 1, prepset_path)
-                except Exception as e: raise e
-                finally:
-                    undo_block_name = "Prepare SGTK Playblast"
-                    if not first_undo_block:
-                        first_undo_block = undo_block_name
-                    hlev.AcceptShotChanges(shot, undo_block_name)
 
                 # 3. open preprocessor to set the active prepset; 
                 # This is a workaround due to the bad type error when directly accessing prepsets from code.
@@ -162,18 +155,15 @@ class PlayblastInbuiltApp(InbuiltApp):
                 img_proc.ByID(1).ClickAndWait() # OK
 
             # 4. hide all other cameras and clear the selection to prevent them from showing up in the playblast
-            hlev.Begin()
-            try:
+            undo_block_name = "Hide Other Cameras"
+            with Undo(hlev, undo_block_name, False):
+                if not first_undo_block:
+                    first_undo_block = undo_block_name
+            
                 for cam in hlev.Cameras():
                     if cam != active_cam:
                         cam.show = False
                 hlev.ClearSelection()
-            except Exception as e: raise e
-            finally:
-                undo_block_name = "Hide Other Cameras"
-                if not first_undo_block:
-                    first_undo_block = undo_block_name
-                hlev.Accept(undo_block_name)
 
             # 5. open floating perspective if not already present            
             window_title = "Perspective Window"
@@ -295,18 +285,3 @@ class PlayblastInbuiltApp(InbuiltApp):
         path = template.apply_fields(work_fields)
         path = path.replace("9999", "%04d")
         return path, template, work_fields
-        
-class Timer(): #TODO maybe move this somewhere else
-    def __init__(self, sleep, timeout):
-        self._time = 0
-        self._timeout = timeout
-        self._sleep = sleep
-
-    def sleep(self, err_msg=""):
-        time.sleep(self._sleep)
-        self._time += self._sleep
-        if self._time > self._timeout:
-            raise Exception(err_msg)
-        
-    def reset(self):
-        self._time = 0

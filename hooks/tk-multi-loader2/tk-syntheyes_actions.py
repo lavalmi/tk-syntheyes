@@ -14,12 +14,9 @@ Hook that loads defines all the available actions, broken down by publish type.
 import os
 
 import sgtk
-
-import SyPy3
-from SyPy3.syobj import SyObj
-from SyPy3.sywin import SyWin
 from engine import SynthEyesEngine
-
+from SyPy3.syobj import SyObj
+from tk_syntheyes.util.undo import Undo
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -153,9 +150,6 @@ class SyntheyesActions(HookBaseClass):
         engine: SynthEyesEngine = self.parent.engine
         hlev = engine.get_syntheyes_connection()
 
-        hlev.Begin()
-        try:
+        with Undo(hlev, "Import Mesh"):
             obj: SyObj = hlev.CreateNew("MESH")
             obj.Call("ReadMesh", os.path.realpath(path))
-        except Exception as e: raise e
-        finally: hlev.Accept("Import Mesh")

@@ -7,3 +7,5 @@
 # By accessing, using, copying or modifying this work you indicate your
 # agreement to the MIT License. All rights not expressly granted therein are
 # reserved by Sebastian Kral.
+
+from . import tk_syntheyes

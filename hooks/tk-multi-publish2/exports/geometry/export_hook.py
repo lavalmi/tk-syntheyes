@@ -1,8 +1,7 @@
-import os
-
-import SyPy3
 from SyPy3.sylevel import SyLevel
-from SyPy3.syobj import SyObj
+
+from tk_syntheyes.util.undo import Undo
+
 
 def prepare(engine, settings, item):
     """
@@ -15,8 +14,7 @@ def prepare(engine, settings, item):
     """
     hlev: SyLevel = engine.get_syntheyes_connection()
         
-    hlev.Begin()
-    try:
+    with Undo(hlev, "Prepare Export", False):
         for list in (hlev.Objects(), hlev.Lights()):
             for obj in list:
                 obj.isExported = False
@@ -25,9 +23,6 @@ def prepare(engine, settings, item):
             if mesh.obj:
                 mesh.isExported = False
 
-    except Exception as e: raise e
-    finally: hlev.Accept("Prepare Export")
-        
 #def export(engine, settings, item):
     #"""
     #Executes specific export logic. If this function is implemented, the default export behaviour is not called.

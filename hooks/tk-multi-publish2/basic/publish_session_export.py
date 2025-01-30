@@ -9,15 +9,15 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
-import sgtk
 import shutil
 import time
-
 from pathlib import Path
 
-from engine import SynthEyesEngine
-from helper_functions import StoppableThread
+import sgtk
 import SyPy3
+from engine import SynthEyesEngine
+from tk_syntheyes.util.stoppable_thread import StoppableThread
+from tk_syntheyes.util.undo import Undo
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -255,15 +255,6 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
             self.logger.error(error_msg, extra=_get_save_as_action())
             raise Exception(error_msg)
 
-        # ---- check if the session contains unsaved changes
-        #if hlev.HasChanged():
-        #    error_msg = "The SynthEyes session has unsaved changes. Make sure to save your file first."
-        #    self.logger.error(
-        #        error_msg,
-        #        extra=_get_save_action(),
-        #    )
-        #    raise Exception(error_msg)
-
         item.properties["publish_type"] = settings["publish_type"].value
         template_name = settings["publish_template"].value
         publish_template = publisher.get_template_by_name(template_name)
@@ -404,17 +395,15 @@ class SyntheyesExportPublishPlugin(HookBaseClass):
             hook.export(engine, settings, item)
         else:
             # open stoppable thread to suprress warnings/infos after export
-            thread = SuppressWarningsThread(engine)
+            thread = SuppressWarningsThread(0.016, engine)
             thread.start()
             self.logger.debug("Started suppress warnings thread")
 
             # universally deactivate LiDAR-scans before exporting
-            hlev.Begin()
-            try:
+            with Undo(hlev, "Disable LiDAR", False):
                 for mesh in hlev.Meshes():
                     if os.path.splitext(mesh.file)[1].lower() == ".xyz":
                         mesh.isExported = False
-            finally: hlev.Accept("Disable LiDAR")
             
             # call SynthEyes' actual export function
             self.logger.info(msg)
@@ -474,28 +463,16 @@ def _get_save_as_action():
         }
     }
 
-def _get_save_action():
-    """
-    Simple helper for returning a log action dict for saving unsaved changes in the current session
-    """
-
-    engine: SynthEyesEngine = sgtk.platform.current_engine()
-    callback = engine.save_session
-
-    return {
-        "action_button": {
-            "label": "Save",
-            "tooltip": "Save unsaved changes",
-            "callback": callback
-        }
-    }
-
 class SuppressWarningsThread(StoppableThread):
-    def __init__(self, engine, *args, **kwargs):
+    def __init__(self, update_rate, engine: SynthEyesEngine, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._hlev = SyPy3.SyLevel()
-        self._connected = self._hlev.OpenExisting(engine._port, engine._pin)
+        self._update_rate = update_rate
+        
+        # NOTE: important to create a new connection here as this is a separate thread;
+        # Otherwise might result in unexpected behaviour due to race conditions
+        self._hlev = engine.get_new_syntheyes_connection()
+        self._connected = True        
       
     def run(self):
         if not self._connected:
@@ -504,4 +481,7 @@ class SuppressWarningsThread(StoppableThread):
         while not self.stopped():
             if self._hlev.Popup().IsValid():
                 self._hlev.Popup().CloseAndWait()
-            time.sleep(0.016)
+            time.sleep(self._update_rate)
+            
+        self._connected = False
+        self._hlev.Close()
