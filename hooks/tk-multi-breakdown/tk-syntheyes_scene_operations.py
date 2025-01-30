@@ -84,7 +84,7 @@ class BreakdownSceneOperations(HookBaseClass):
             new_path = i["path"]
 
             if node_type in node_type_list:
-                engine.log_debug(
+                engine.logger.debug(
                     "Node %s: Updating to version %s" % (node_name, new_path)
                 )
                 if node_type == "MESH":

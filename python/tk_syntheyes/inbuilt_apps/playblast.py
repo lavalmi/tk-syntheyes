@@ -261,7 +261,7 @@ class PlayblastInbuiltApp(InbuiltApp):
 
         except Exception as e:
             err_msg = "Error during Playblast: {}".format(e)
-            self.engine.log_error(err_msg)
+            self.engine.logger.error(err_msg)
             ui.message_box(
                 QMessageBox.Critical,
                 "Failure",

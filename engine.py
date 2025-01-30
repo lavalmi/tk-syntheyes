@@ -16,8 +16,8 @@ A SynthEyes engine for Shotgun Toolkit.
 import importlib
 import importlib.util
 import inspect
-import logging
 import os
+from queue import Queue
 import re
 import sys
 
@@ -36,6 +36,7 @@ if python_dir not in sys.path:
 
 from tk_syntheyes.inbuilt_app import InbuiltApp
 from helper_functions import load_module, rreload
+
 
 class InbuiltAppPackageFinder:
     """
@@ -67,8 +68,6 @@ class SynthEyesEngine(Engine):
     """
     Toolkit engine for SynthEyes.
     """
-
-    __DIALOG_SIZE_CACHE = dict()
 
     @property
     def context_change_allowed(self):
@@ -333,9 +332,11 @@ class SynthEyesEngine(Engine):
         else:
             self.ui: MainWindow
             self.ui._engine = self
-            self.ui.console.connect_to_engine(self.ui._engine)
             self.ui.regenerate_panels()
         self.init_heartbeat()
+        
+        # Write any pending logs to the log console if any
+        self.log_to_console()
 
     def post_context_change(self, old_context, new_context):
         """
@@ -360,7 +361,7 @@ class SynthEyesEngine(Engine):
             from tk_syntheyes.util.heartbeat import Heartbeat
             if hasattr(self, "_heartbeat"):
                 self._heartbeat.join(True)
-            self._heartbeat = Heartbeat(self, self.logger)
+            self._heartbeat = Heartbeat(self)
         except Exception as e:
             msg = ("Shotgun Pipeline Toolkit failed to initialize SynthEyes heartbeat: %s" % e)
             self.logger.exception(msg)
@@ -415,26 +416,71 @@ class SynthEyesEngine(Engine):
     ############################################################################    
     ### Logging ###
 
-    def _init_logging(self):
-        if self.get_setting("debug_logging", False):
-            self.logger.setLevel(logging.DEBUG)
-        else:
-            self.logger.setLevel(logging.INFO)
+    def _emit_log_message(self, handler, record):
+        """
+        Called by the engine to log messages in Maya script editor.
+        All log messages from the toolkit logging namespace will be passed to this method.
 
-    def log_debug(self, msg, *args, **kwargs):
-        self.logger.debug(msg, *args, **kwargs)
+        :param handler: Log handler that this message was dispatched from.
+                        Its default format is "[levelname basename] message".
+        :type handler: :class:`~python.logging.LogHandler`
+        :param record: Standard python logging record.
+        :type record: :class:`~python.logging.LogRecord`
+        """
+        # Use default formatting
+        msg = f"{record.asctime} {handler.format(record)}"
+        
+        COLOR_MAP = {
+            'CRITICAL': 'indianred',
+            'ERROR': 'indianred',
+            'WARNING': 'khaki',
+            'INFO': 'lightgray',
+            'DEBUG': 'lightblue',
+        }
 
-    def log_info(self, msg, *args, **kwargs):
-        self.logger.info(msg, *args, **kwargs)
+        for lvl, col in COLOR_MAP.items():
+            if f"[{lvl}" in msg:
+                msg = f"<font color={col}>{msg}</font>"
+                break
+        msg = f"<pre>{msg}</pre>"
 
-    def log_warning(self, msg, *args, **kwargs):
-        self.logger.warning(msg, *args, **kwargs)
+        # Try to display the message in the logging console in a thread safe manner.
+        self.async_execute_in_main_thread(self.log_to_console, msg)
 
-    def log_error(self, msg, *args, **kwargs):
-        self.logger.error(msg, *args, **kwargs)
+    @property
+    def pending_logs(self) -> Queue:
+        logs = getattr(self, "_pending_logs", None)
+        if logs is None:
+            self._pending_logs = Queue()
+        return self._pending_logs
 
-    def log_exception(self, msg, *args, **kwargs):
-        self.logger.exception(msg, *args, **kwargs)
+    def log_to_console(self, msg = None):
+        """Log all pending log messages to the engine's UI log console if present.
+        Otherwise, temporarily store :msg: in a queue.
+        When called without any arguments, no new log message will be added to the queue.
+        However, writing all pending messages to the console will still be attempted.
+        :returns: False if console is not present and the pending items could not be written. True, otherwise.
+        """
+        pending = self.pending_logs
+        
+        if msg is not None:
+            pending.put(msg)
+
+        # Get ui logging console
+        ui = getattr(self, "ui", None)
+        if not ui:
+            return False
+        console = getattr(ui, "console", None)
+        if not console:
+            return False
+
+        while not pending.empty():
+            log = pending.get()
+            if not log:
+                continue
+            self.ui.console.append_to_log(log)
+
+        return True
 
     ############################################################################
     ### Functions ###
@@ -473,7 +519,7 @@ class SynthEyesEngine(Engine):
             hlev.ClearChanged()
             hlev.CloseSynthEyes()
         except Exception as e:
-            self.log_error(e)
+            self.logger.error(e)
         self._cleanup_env()
 
     def save_session(self):
@@ -482,7 +528,7 @@ class SynthEyesEngine(Engine):
             hlev.Scene().Call("Save", hlev.SNIFileName())
             hlev.ClearChanged()
         except Exception as e:
-            self.log_error("Could not save current SynthEyes session file.\n%s", e)
+            self.logger.error("Could not save current SynthEyes session file.\n%s", e)
 
     def save_session_as(self, path: str):
         try:
@@ -491,14 +537,14 @@ class SynthEyesEngine(Engine):
             hlev.Scene().Call("Save", path)
             hlev.ClearChanged()
         except Exception as e:
-            self.log_error("Error during saving to %s\n%s", path, e)
+            self.logger.error("Error during saving to %s\n%s", path, e)
 
     def get_session_path(self):
         try:
             hlev = self.get_syntheyes_connection()
             return hlev.SNIFileName()
         except Exception as e:
-            self.log_error("Error accessing the file path\n%s", e)
+            self.logger.error("Error accessing the file path\n%s", e)
         return None
     
     def get_syntheyes_connection(self) -> SyPy3.sylevel.SyLevel:
@@ -559,7 +605,7 @@ class SynthEyesEngine(Engine):
         popup = hlev.Popup()
         if popup.IsValid():
             message = "A popup \"{}\" is still open in SynthEyes. This may cause unexpected behaviour. Please close the popup first and repeat the previous action.".format(popup.Name())
-            self.log_info(message)
+            self.logger.info(message)
             try:
                 QtGui.QApplication.setOverrideCursor(QtCore.Qt.ArrowCursor)
                 self.ui.message_box(

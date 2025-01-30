@@ -47,7 +47,7 @@ def load_module(name, path, reload = False, recursive_reload = False, submodule_
             return mod
         except (ImportError, ModuleNotFoundError) as e:
             if logger:
-                    logger.info("Could not load module %s: %s", name, e)
+                logger.warning("Could not load module %s: %s", name, e)
             return None
     elif reload:
         if recursive_reload:
@@ -57,7 +57,7 @@ def load_module(name, path, reload = False, recursive_reload = False, submodule_
                 mod_names = [importlib.reload(sys.modules[name]).__name__]
             except (ImportError, ModuleNotFoundError) as e:
                 if logger:
-                    logger.info("Could not reload module %s: %s", name, e)
+                    logger.warning("Could not reload module %s: %s", name, e)
         if reloaded_modules:
             reloaded_modules.extend(mod_names)
 
@@ -93,6 +93,6 @@ def rreload(module, reloaded = None, logger: Logger = None):
         importlib.reload(module)
     except (ImportError, ModuleNotFoundError) as e:
         if logger:
-            logger.info("Could not reload module %s: %s", module.__name__, e)
+            logger.warning("Could not reload module %s: %s", module.__name__, e)
     
     return reloaded

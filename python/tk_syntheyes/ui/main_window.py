@@ -39,7 +39,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._suppressed = False
 
         self._engine = engine
-        self.create_logging_console()
+        self.console = logging_console.LogConsole(self)
         self.click_pos = None
         self._menu_click_time = time.time()
         
@@ -102,11 +102,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.menubar.defaultMouseDoubleClickEvent = self.menubar.mouseDoubleClickEvent
         self.menubar.mouseDoubleClickEvent = self.menu_double_click_event
 
-
-    def create_logging_console(self):
-        self.console = logging_console.LogConsole(self)
-        self.console.connect_to_engine(self._engine)
-    
     def move_window(self, event):
         if not (self.click_pos is None or self.isMaximized() or self.isMinimized()):
             if event.buttons() == Qt.LeftButton:
@@ -201,7 +196,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if not hasattr(parent_panel, "sub_panels"):
                 parent_panel.sub_panels = {}
             if name in parent_panel.sub_panels:
-                self._engine.log_debug("%s already exists in parent panel %s", name, parent_panel.name)
+                self._engine.logger.debug("%s already exists in parent panel %s", name, parent_panel.name)
                 return None
         
         panel = panel_type(self)
@@ -690,7 +685,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         try:
             self._config.read(self._config_path())
         except Exception as e:
-            self._engine.log_info("Could not read tk-syntheyes config: %s", e)
+            self._engine.logger.info("Could not read tk-syntheyes config: %s", e)
             success = False
         
         ### Setup UI defaults ###
