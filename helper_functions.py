@@ -1,4 +1,10 @@
+import importlib
+import importlib.util
+import sys
 import threading
+from logging import Logger
+from types import ModuleType
+import traceback
 
 def strtobool(val):
     """Convert a string representation of truth to true (1) or false (0).
@@ -30,3 +36,66 @@ class StoppableThread(threading.Thread):
 
     def stopped(self):
         return self._stop_event.is_set()
+
+
+def load_module(name, path, reload = False, recursive_reload = False, submodule_search_locations: list[str] = None, reloaded_modules: list[str] = None, logger: Logger = None):
+    if name not in sys.modules:
+        try:
+            spec = importlib.util.spec_from_file_location(name, path, submodule_search_locations=submodule_search_locations)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            sys.modules[name] = mod
+            return mod
+        except Exception as e:
+            if logger:
+                logger.warning("Could not load module %s: %s\n%s", name, e, "".join(traceback.format_exception(e)))
+            return None
+    elif reload:
+        if recursive_reload:
+            mod_names = rreload(sys.modules[name], reloaded_modules, logger)
+        else:
+            try:
+                mod_names = [importlib.reload(sys.modules[name]).__name__]
+            except Exception as e:
+                if logger:
+                    logger.warning("Could not reload module %s: %s\n%s", name, e, "".join(traceback.format_exception(e)))
+            else:
+                mod_names = None
+        if reloaded_modules and mod_names:
+            reloaded_modules.extend(mod_names)
+
+    return sys.modules[name]
+
+
+def rreload(module, reloaded = None, logger: Logger = None):
+    """Recursively reload modules relative to the given package of :module:.
+    :param reloaded: set of names of reloaded modules that is populated with each call
+    :returns: the final set of reloaded module names; contains all modules that were reloaded in the process
+    """
+    # Init list of previously reloaded modules if None
+    # NOTE: If initialized as a default argument, the list would be initialized only once 
+    # and then be permanently tied to the function object, retaining its values.
+    if not reloaded:
+        reloaded = set()
+
+    if module.__name__ in reloaded:
+        return reloaded
+    reloaded.add(module.__name__)
+
+    for attr_name in dir(module):
+        attr = getattr(module, attr_name)
+        if isinstance(attr, ModuleType) and attr.__name__ in sys.modules:
+            if attr.__name__.startswith(module.__name__):
+                rreload(attr, reloaded, logger)
+        elif hasattr(attr, "__module__"):
+            imported = sys.modules.get(attr.__module__)
+            if imported and imported.__name__.startswith(module.__package__) and imported.__name__ not in reloaded:
+                rreload(imported, reloaded, logger)
+    
+    try:
+        importlib.reload(module)
+    except Exception as e:
+        if logger:
+            logger.warning("Could not reload module %s: %s\n%s", module.__name__, e, "".join(traceback.format_exception(e)))
+    
+    return reloaded

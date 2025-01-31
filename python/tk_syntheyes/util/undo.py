@@ -1,8 +1,7 @@
-from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from SyPy3.sylevel import SyLevel
 
-class UndoBase(ABC):
+class UndoBase:
     """
     This is the common base class for the various undo-blocks (Begin/Accept) in SynthEyes. 
     Do not use this directly. Instead, use the correct subclass for your use-case.
@@ -35,7 +34,7 @@ class UndoBase(ABC):
             self._hlev.Cancel()
             UndoBase._exec_callback(self._cancel_callback, self._cancel_args)
 
-    property
+    @property
     def accepted(self):
         return self._accepted
 
@@ -46,13 +45,11 @@ class UndoBase(ABC):
         """
         self._accepted = False
 
-    @abstractmethod
     def _begin(self):
-        pass
+        raise NotImplementedError("This is meant to be used as a base class only. Use one of the available subclasses instead.")
 
-    @abstractmethod
     def _accept(self):
-        pass
+        raise NotImplementedError("This is meant to be used as a base class only. Use one of the available subclasses instead.")
 
     @staticmethod
     def _exec_callback(callback, args):

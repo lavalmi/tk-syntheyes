@@ -13,8 +13,12 @@ A SynthEyes engine for Shotgun Toolkit.
 
 """
 
-import logging
+import importlib
+import importlib.util
+import inspect
 import os
+from queue import Queue
+import re
 import sys
 
 import sgtk
@@ -30,6 +34,31 @@ python_dir = os.path.join(parent_dir, "python")
 if python_dir not in sys.path:
     sys.path.insert(0, python_dir)
 
+from tk_syntheyes.inbuilt_app import InbuiltApp
+from helper_functions import load_module, rreload
+
+
+class InbuiltAppPackageFinder:
+    """
+    Custom finder for assisting the reloading process of active packages of inbuilt and user apps.
+    The finder will attempt to find the specs for modules that have been previously loaded.
+    The search is, however, limited to the modules in the set provided by the __init__ function.
+    """
+    def __init__(self, modules: set[str] = None):
+        self._modules = set()
+        if modules:
+            self._modules.update(modules)
+
+    def find_spec(self, fullname, path, target = None):
+        if fullname not in self._modules or not target or fullname not in sys.modules:
+            return None
+        spec = getattr(target, "__spec__", None)
+        return importlib.util.spec_from_file_location(fullname, target.__file__, submodule_search_locations=[] if not spec else getattr(spec, "submodule_search_locations", []))        
+    
+    @property
+    def modules(self):
+        return self._modules
+    
 ###############################################################################################
 # The Tank SynthEyes engine
 
@@ -38,8 +67,6 @@ class SynthEyesEngine(Engine):
     """
     Toolkit engine for SynthEyes.
     """
-
-    __DIALOG_SIZE_CACHE = dict()
 
     @property
     def context_change_allowed(self):
@@ -79,6 +106,134 @@ class SynthEyesEngine(Engine):
             pass
 
         return host_info
+
+    @property
+    def inbuilt_apps(self):
+        if getattr(self, "_inbuilt_apps", None):
+            return self._inbuilt_apps
+        
+        # Setup all paths where the engine will look for apps
+        # List[path, is_user_app, is_user_specific]
+        inbuilt_apps_paths = [
+            (os.path.abspath(os.path.join(os.path.dirname(__file__), "python", "tk_syntheyes", "inbuilt_apps")), False, False)
+        ]
+
+        user = getattr(self.context, "user", None)
+        user_name = "" if user is None else user.get("name", None)
+        
+        # Group all valid user module paths
+        module_paths = os.environ.get("SYNTHEYES_MODULE_PATH", "")
+        if module_paths:
+            module_path_list = module_paths.split(";")
+            for module_path in module_path_list:                
+                if not self._is_valid_user_path(module_path):
+                    continue
+                inbuilt_apps_paths.append((module_path, True, False))
+                
+                # Add dedicated user folder that is only loaded for this user
+                if not user_name:
+                    continue
+                module_path = os.path.join(module_path, user_name)
+                if self._is_valid_user_path(module_path):
+                    inbuilt_apps_paths.append((module_path, True, True))
+
+
+        valid_chars = re.compile('[\W]+') # Regex pattern to filter undesired characters -> only A-Z, a-z, 0-9, _
+        loaded_pckgs = set()
+        self._inbuilt_apps = {}
+        for inbuilt_apps_path, is_user_path, is_user_specific in inbuilt_apps_paths:
+            if not os.path.isdir(inbuilt_apps_path) or (is_user_path and not self._check_init_file(inbuilt_apps_path)):
+                continue
+            
+            # Load the current user path as a package for all the corresponding apps to reside in.
+            # That way, potential namespace collisions should be avoidable and this simultaneously allows the use of relative imports in the imported modules.
+            pckg_pre = "user" if is_user_path else "inbuilt"
+            
+            if is_user_specific:
+                pckg_name = f"{pckg_pre}_{os.path.basename(os.path.dirname(inbuilt_apps_path))}_{os.path.basename(inbuilt_apps_path)}"
+            else:
+                pckg_name = f"{pckg_pre}_{os.path.basename(inbuilt_apps_path)}"
+            pckg_name = valid_chars.sub('', pckg_name)
+
+            # Load package module
+            package_mod = load_module(pckg_name, os.path.join(inbuilt_apps_path, "__init__.py"), True, False, submodule_search_locations = [], logger = self.logger)
+            if not package_mod:
+                continue
+            
+            loaded_pckgs.add(pckg_name)
+            module_prefix = pckg_name + "."
+
+            # Load all python modules aka files that contain an InbuiltApp subclass and import them into the new package
+            for file in os.listdir(inbuilt_apps_path):
+                if file == "__init__.py" or not file.endswith(".py"):
+                    continue
+
+                file_path = os.path.join(inbuilt_apps_path, file)
+                if not os.path.isfile(file_path):
+                    continue
+
+                mod = load_module(module_prefix + file.rsplit('.', 1)[0], file_path, True, True, logger = self.logger)
+                if not mod:
+                    continue
+
+                # iterate over all classes
+                for cls_name, cls in inspect.getmembers(mod, inspect.isclass):
+                    if cls != InbuiltApp and issubclass(cls, InbuiltApp):
+                        ins = cls(self)
+                        ins._is_user_app = is_user_path
+                        self._inbuilt_apps[cls_name] = ins
+
+        self._update_inbuilt_app_finder(loaded_pckgs)
+        return self._inbuilt_apps
+
+    def _clear_inbuilt_apps(self):
+        if hasattr(self, "_inbuilt_apps"):
+            del self._inbuilt_apps
+        self._update_inbuilt_app_finder(None)
+
+    def _update_inbuilt_app_finder(self, modules: set[str]) -> InbuiltAppPackageFinder:
+        finder: InbuiltAppPackageFinder = getattr(self, "_inbuilt_app_finder", None)
+        empty = not modules or len(modules)
+        if finder:
+            if empty:
+                finder.modules.clear()
+                finder.modules.update(modules)
+                return finder
+            else:
+                if finder in sys.meta_path:
+                    sys.meta_path.remove(finder)
+                del self._inbuit_app_finder
+                return None
+        elif empty:
+            finder = self._inbuit_app_finder = InbuiltAppPackageFinder(modules)
+            sys.meta_path.append(finder)
+            return finder
+        
+        return None
+
+    @staticmethod
+    def _is_valid_user_path(path):
+        if not os.path.isdir(path):
+            return False
+
+        # Check that no invalid __init__.py file is present
+        init = os.path.join(path, "__init__.py")
+        if os.path.exists(init) and not os.path.isfile(init):
+            return False
+        
+        return True
+    
+    @staticmethod
+    def _check_init_file(path):
+        """Check if an __init__.py file exists in the target directory :path:.
+        returns: True if an __init__.py file exists, False otherwise
+        """
+        if not os.path.isdir(path):
+            return False
+        init_path = os.path.join(path, "__init__.py")
+        if os.path.exists(init_path) and os.path.isfile(init_path):
+            return True
+        return False
 
     ##########################################################################################
     # init and destroy
@@ -176,9 +331,11 @@ class SynthEyesEngine(Engine):
         else:
             self.ui: MainWindow
             self.ui._engine = self
-            self.ui.console.connect_to_engine(self.ui._engine)
-            #self.ui.regenerate_panels()
+            self.ui.regenerate_panels()
         self.init_heartbeat()
+        
+        # Write any pending logs to the log console if any
+        self.log_to_console()
 
     def post_context_change(self, old_context, new_context):
         """
@@ -203,7 +360,7 @@ class SynthEyesEngine(Engine):
             from tk_syntheyes.util.heartbeat import Heartbeat
             if hasattr(self, "_heartbeat"):
                 self._heartbeat.join(True)
-            self._heartbeat = Heartbeat(self, self.logger)
+            self._heartbeat = Heartbeat(self)
         except Exception as e:
             msg = ("Shotgun Pipeline Toolkit failed to initialize SynthEyes heartbeat: %s" % e)
             self.logger.exception(msg)
@@ -223,11 +380,6 @@ class SynthEyesEngine(Engine):
     def change_context(self, new_context):
         context = self.context
         super().change_context(new_context)
-        if context == new_context:
-            return
-        
-        # Call update function to reflect the context change in the UI
-        self.ui.regenerate_panels()
     
     def _get_dialog_parent(self):
         """
@@ -263,26 +415,71 @@ class SynthEyesEngine(Engine):
     ############################################################################    
     ### Logging ###
 
-    def _init_logging(self):
-        if self.get_setting("debug_logging", False):
-            self.logger.setLevel(logging.DEBUG)
-        else:
-            self.logger.setLevel(logging.INFO)
+    def _emit_log_message(self, handler, record):
+        """
+        Called by the engine to log messages in Maya script editor.
+        All log messages from the toolkit logging namespace will be passed to this method.
 
-    def log_debug(self, msg, *args, **kwargs):
-        self.logger.debug(msg, *args, **kwargs)
+        :param handler: Log handler that this message was dispatched from.
+                        Its default format is "[levelname basename] message".
+        :type handler: :class:`~python.logging.LogHandler`
+        :param record: Standard python logging record.
+        :type record: :class:`~python.logging.LogRecord`
+        """
+        # Use default formatting
+        msg = f"{record.asctime} {handler.format(record)}"
+        
+        COLOR_MAP = {
+            'CRITICAL': 'indianred',
+            'ERROR': 'indianred',
+            'WARNING': 'khaki',
+            'INFO': 'lightgray',
+            'DEBUG': 'lightblue',
+        }
 
-    def log_info(self, msg, *args, **kwargs):
-        self.logger.info(msg, *args, **kwargs)
+        for lvl, col in COLOR_MAP.items():
+            if f"[{lvl}" in msg:
+                msg = f"<font color={col}>{msg}</font>"
+                break
+        msg = f"<pre>{msg}</pre>"
 
-    def log_warning(self, msg, *args, **kwargs):
-        self.logger.warning(msg, *args, **kwargs)
+        # Try to display the message in the logging console in a thread safe manner.
+        self.async_execute_in_main_thread(self.log_to_console, msg)
 
-    def log_error(self, msg, *args, **kwargs):
-        self.logger.error(msg, *args, **kwargs)
+    @property
+    def pending_logs(self) -> Queue:
+        logs = getattr(self, "_pending_logs", None)
+        if logs is None:
+            self._pending_logs = Queue()
+        return self._pending_logs
 
-    def log_exception(self, msg, *args, **kwargs):
-        self.logger.exception(msg, *args, **kwargs)
+    def log_to_console(self, msg = None):
+        """Log all pending log messages to the engine's UI log console if present.
+        Otherwise, temporarily store :msg: in a queue.
+        When called without any arguments, no new log message will be added to the queue.
+        However, writing all pending messages to the console will still be attempted.
+        :returns: False if console is not present and the pending items could not be written. True, otherwise.
+        """
+        pending = self.pending_logs
+        
+        if msg is not None:
+            pending.put(msg)
+
+        # Get ui logging console
+        ui = getattr(self, "ui", None)
+        if not ui:
+            return False
+        console = getattr(ui, "console", None)
+        if not console:
+            return False
+
+        while not pending.empty():
+            log = pending.get()
+            if not log:
+                continue
+            self.ui.console.append_to_log(log)
+
+        return True
 
     ############################################################################
     ### Functions ###
@@ -321,7 +518,7 @@ class SynthEyesEngine(Engine):
             hlev.ClearChanged()
             hlev.CloseSynthEyes()
         except Exception as e:
-            self.log_error(e)
+            self.logger.error(e)
         self._cleanup_env()
 
     def save_session(self):
@@ -330,7 +527,7 @@ class SynthEyesEngine(Engine):
             hlev.Scene().Call("Save", hlev.SNIFileName())
             hlev.ClearChanged()
         except Exception as e:
-            self.log_error("Could not save current SynthEyes session file.\n%s", e)
+            self.logger.error("Could not save current SynthEyes session file.\n%s", e)
 
     def save_session_as(self, path: str):
         try:
@@ -339,14 +536,14 @@ class SynthEyesEngine(Engine):
             hlev.Scene().Call("Save", path)
             hlev.ClearChanged()
         except Exception as e:
-            self.log_error("Error during saving to %s\n%s", path, e)
+            self.logger.error("Error during saving to %s\n%s", path, e)
 
     def get_session_path(self):
         try:
             hlev = self.get_syntheyes_connection()
             return hlev.SNIFileName()
         except Exception as e:
-            self.log_error("Error accessing the file path\n%s", e)
+            self.logger.error("Error accessing the file path\n%s", e)
         return None
     
     def get_syntheyes_connection(self) -> SyPy3.sylevel.SyLevel:
@@ -407,7 +604,7 @@ class SynthEyesEngine(Engine):
         popup = hlev.Popup()
         if popup.IsValid():
             message = "A popup \"{}\" is still open in SynthEyes. This may cause unexpected behaviour. Please close the popup first and repeat the previous action.".format(popup.Name())
-            self.log_info(message)
+            self.logger.info(message)
             try:
                 QtGui.QApplication.setOverrideCursor(QtCore.Qt.ArrowCursor)
                 self.ui.message_box(

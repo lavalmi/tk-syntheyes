@@ -14,7 +14,6 @@ import sys
 import sgtk
 from sgtk.platform import LaunchInformation, SoftwareLauncher
 
-
 class SynthEyesLauncher(SoftwareLauncher):
     """
     Handles launching SynthEyes executables. Automatically starts up
@@ -64,9 +63,11 @@ class SynthEyesLauncher(SoftwareLauncher):
             args = " ".join([args, "-start", startup_path])
 
         # Set the syntheyes python path to point to the shotgun python executable to ensure package compatibility. Ignore this If the path is already present to allow overwriting the default path if necessary.
+        # Use the python or pythonw executable, depending on the environment specifications. pythonw is the default.
         if not os.environ.get("SYNTHEYES_PYTHON_PATH"):
-            python = os.path.splitext(sys.executable)
-            os.environ["SYNTHEYES_PYTHON_PATH"] = "w".join(python)
+            show_console = os.environ.get("SYNTHEYES_SHOW_CONSOLE")
+            show_console = show_console is not None and show_console.lower() in ("true", "yes", "y", "1", "on")
+            os.environ["SYNTHEYES_PYTHON_PATH"] = sys.executable if show_console else "w".join(os.path.splitext(sys.executable))
 
         # Check the engine settings to see whether any plugins have been
         # specified to load.
@@ -83,16 +84,16 @@ class SynthEyesLauncher(SoftwareLauncher):
             # used by the startup/bootstrap.py file.
             load_SynthEyes_plugins = []
 
-            # Add Toolkit plugins to load to the SynthEyes_MODULE_PATH environment
+            # Add Toolkit plugins to load to the SYNTHEYES_MODULE_PATH environment
             # variable so the SynthEyes loadPlugin command can find them.
-            SynthEyes_module_paths = os.environ.get("SynthEyes_MODULE_PATH") or []
+            SynthEyes_module_paths = os.environ.get("SYNTHEYES_MODULE_PATH") or []
             if SynthEyes_module_paths:
                 SynthEyes_module_paths = SynthEyes_module_paths.split(os.pathsep)
 
             for find_plugin in find_plugins:
                 load_plugin = os.path.join(self.disk_location, "plugins", find_plugin)
                 if os.path.exists(load_plugin):
-                    # If the plugin path exists, add it to the list of SynthEyes_MODULE_PATHS
+                    # If the plugin path exists, add it to the list of SYNTHEYES_MODULE_PATH
                     # so SynthEyes can find it and to the list of SGTK_LOAD_SynthEyes_PLUGINS so
                     # the startup's bootstrap.py file knows what plugins to load.
                     self.logger.debug(

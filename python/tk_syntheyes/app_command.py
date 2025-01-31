@@ -13,14 +13,14 @@ class AppCommand(object):
     """
     Wraps around a single command that you get from engine.commands
     """
-    def __init__(self, name, command_dict):
+    def __init__(self, name, command_dict: dict):
         self.name = name
-        self.properties = command_dict["properties"]
+        self.properties: dict = command_dict.get("properties", {})
         self.favourite = False
-        self.callback = command_dict["callback"]
+        self.callback = command_dict.get("callback")
 
-    @classmethod
-    def init_without_dict(self, name, app_name, properties, callback):
+    @staticmethod
+    def init_without_dict(name, app_name, properties, callback):
         if not properties:
             properties = {}
         return AppCommand(name, {"app" : app_name, "properties" : properties, "callback" : callback})
@@ -55,3 +55,9 @@ class AppCommand(object):
         returns the command type. Returns node, custom_pane or default
         """
         return self.properties.get("type", "default")
+    
+    @property
+    def is_valid(self):
+        if not self.callback or not self.properties or not self.properties.get("app"):
+            return False
+        return True

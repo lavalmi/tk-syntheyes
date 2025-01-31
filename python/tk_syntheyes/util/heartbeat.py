@@ -18,8 +18,8 @@ from engine import SynthEyesEngine
 
 class Heartbeat(object):
 
-    def __init__(self, engine: SynthEyesEngine, logger):
-        self._logger: logging.Logger = logger
+    def __init__(self, engine: SynthEyesEngine):
+        self._logger: logging.Logger = engine.logger
         self._engine: SynthEyesEngine = engine
         self._hlev = self._engine.get_new_syntheyes_connection()
         self._stop = False
@@ -43,7 +43,7 @@ class Heartbeat(object):
 
     def heartbeat_thread_run(self):
         self._running = True
-        self._logger.info("Heartbeat: Started")
+        self._logger.debug("Heartbeat: Started")
         
         error_cycle = 0
         syntheyes_closed = False
@@ -61,7 +61,7 @@ class Heartbeat(object):
                     syntheyes_closed = True
             else: error_cycle = 0
 
-        self._logger.info("Heartbeat: Stopped")
+        self._logger.debug("Heartbeat: Stopped")
         self._running = False
         if syntheyes_closed or self._shutdown_on_exit:
             self._engine.ui.emit_exit_signal()
