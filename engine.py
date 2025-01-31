@@ -50,11 +50,10 @@ class InbuiltAppPackageFinder:
             self._modules.update(modules)
 
     def find_spec(self, fullname, path, target = None):
-        if fullname not in self._modules or not target or not hasattr(target, "__spec__") or fullname not in sys.modules:
+        if fullname not in self._modules or not target or fullname not in sys.modules:
             return None
-        # NOTE: The previously loaded spec is reused here
-        # Alternatively the spec could be reloaded via its __file__ attribute and importlib.util.spec_from_file_location
-        return target.__spec__
+        spec = getattr(target, "__spec__", None)
+        return importlib.util.spec_from_file_location(fullname, target.__file__, submodule_search_locations=[] if not spec else getattr(spec, "submodule_search_locations", []))        
     
     @property
     def modules(self):
@@ -140,7 +139,7 @@ class SynthEyesEngine(Engine):
 
 
         valid_chars = re.compile('[\W]+') # Regex pattern to filter undesired characters -> only A-Z, a-z, 0-9, _
-        valid_pckgs = set()
+        loaded_pckgs = set()
         self._inbuilt_apps = {}
         for inbuilt_apps_path, is_user_path, is_user_specific in inbuilt_apps_paths:
             if not os.path.isdir(inbuilt_apps_path) or (is_user_path and not self._check_init_file(inbuilt_apps_path)):
@@ -157,10 +156,11 @@ class SynthEyesEngine(Engine):
             pckg_name = valid_chars.sub('', pckg_name)
 
             # Load package module
-            package_mod = load_module(pckg_name, os.path.join(inbuilt_apps_path, "__init__.py"), True, submodule_search_locations = [], logger = self.logger)
+            package_mod = load_module(pckg_name, os.path.join(inbuilt_apps_path, "__init__.py"), True, False, submodule_search_locations = [], logger = self.logger)
             if not package_mod:
                 continue
-
+            
+            loaded_pckgs.add(pckg_name)
             module_prefix = pckg_name + "."
 
             # Load all python modules aka files that contain an InbuiltApp subclass and import them into the new package
@@ -182,9 +182,8 @@ class SynthEyesEngine(Engine):
                         ins = cls(self)
                         ins._is_user_app = is_user_path
                         self._inbuilt_apps[cls_name] = ins
-                        valid_pckgs.add(pckg_name)
 
-        self._update_inbuilt_app_finder(valid_pckgs)
+        self._update_inbuilt_app_finder(loaded_pckgs)
         return self._inbuilt_apps
 
     def _clear_inbuilt_apps(self):

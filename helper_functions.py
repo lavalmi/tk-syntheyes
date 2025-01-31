@@ -4,6 +4,7 @@ import sys
 import threading
 from logging import Logger
 from types import ModuleType
+import traceback
 
 def strtobool(val):
     """Convert a string representation of truth to true (1) or false (0).
@@ -45,20 +46,22 @@ def load_module(name, path, reload = False, recursive_reload = False, submodule_
             spec.loader.exec_module(mod)
             sys.modules[name] = mod
             return mod
-        except (ImportError, ModuleNotFoundError) as e:
+        except Exception as e:
             if logger:
-                logger.warning("Could not load module %s: %s", name, e)
+                logger.warning("Could not load module %s: %s\n%s", name, e, "".join(traceback.format_exception(e)))
             return None
     elif reload:
         if recursive_reload:
-            mod_names = rreload(sys.modules[name])
+            mod_names = rreload(sys.modules[name], reloaded_modules, logger)
         else:
             try:
                 mod_names = [importlib.reload(sys.modules[name]).__name__]
-            except (ImportError, ModuleNotFoundError) as e:
+            except Exception as e:
                 if logger:
-                    logger.warning("Could not reload module %s: %s", name, e)
-        if reloaded_modules:
+                    logger.warning("Could not reload module %s: %s\n%s", name, e, "".join(traceback.format_exception(e)))
+            else:
+                mod_names = None
+        if reloaded_modules and mod_names:
             reloaded_modules.extend(mod_names)
 
     return sys.modules[name]
@@ -91,8 +94,8 @@ def rreload(module, reloaded = None, logger: Logger = None):
     
     try:
         importlib.reload(module)
-    except (ImportError, ModuleNotFoundError) as e:
+    except Exception as e:
         if logger:
-            logger.warning("Could not reload module %s: %s", module.__name__, e)
+            logger.warning("Could not reload module %s: %s\n%s", module.__name__, e, "".join(traceback.format_exception(e)))
     
     return reloaded
