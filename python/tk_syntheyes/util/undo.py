@@ -63,8 +63,8 @@ class UndoBase:
             callback(args)
 
 class Undo(UndoBase):
-    def __init__(self, hlev: SyLevel, title, cancel_on_exc=True, accept_callback=None, cancel_callback=None):
-        super().__init__(hlev, title, accept_callback, cancel_callback)
+    def __init__(self, hlev: SyLevel, title, cancel_on_exc=True, accept_callback=None, accept_args=None, cancel_callback=None, cancel_args=None):
+        super().__init__(hlev, cancel_on_exc, accept_callback, accept_args, cancel_callback, cancel_args)
         self._title = title
 
     def _begin(self):
@@ -74,8 +74,8 @@ class Undo(UndoBase):
         self._hlev.Accept(self._title)
 
 class UndoPref(UndoBase):
-    def __init__(self, hlev: SyLevel, cancel_on_exc=True, accept_callback=None, cancel_callback=None):
-        super().__init__(hlev, accept_callback, cancel_callback)
+    def __init__(self, hlev: SyLevel, cancel_on_exc=True, accept_callback=None, accept_args=None, cancel_callback=None, cancel_args=None):
+        super().__init__(hlev, cancel_on_exc, accept_callback, accept_args, cancel_callback, cancel_args)
 
     def _begin(self):
         self._hlev.BeginPref()
@@ -84,8 +84,8 @@ class UndoPref(UndoBase):
         self._hlev.AcceptPref()
 
 class UndoShotChanges(UndoBase):
-    def __init__(self, hlev: SyLevel, title, shot, cancel_on_exc=True, accept_callback=None, cancel_callback=None):
-        super().__init__(hlev, title, accept_callback, cancel_callback)
+    def __init__(self, hlev: SyLevel, title, shot, cancel_on_exc=True, accept_callback=None, accept_args=None, cancel_callback=None, cancel_args=None):
+        super().__init__(hlev, cancel_on_exc, accept_callback, accept_args, cancel_callback, cancel_args)
         self._title = title
         self._shot = shot
 
@@ -96,8 +96,8 @@ class UndoShotChanges(UndoBase):
         self._hlev.AcceptShotChanges(self._shot, self._title)
 
 class UndoStereoChanges(UndoBase):
-    def __init__(self, hlev: SyLevel, title, lshot, rshot, cancel_on_exc=True, accept_callback=None, cancel_callback=None):
-        super().__init__(hlev, title, accept_callback, cancel_callback)
+    def __init__(self, hlev: SyLevel, title, lshot, rshot, cancel_on_exc=True, accept_callback=None, accept_args=None, cancel_callback=None, cancel_args=None):
+        super().__init__(hlev, cancel_on_exc, accept_callback, accept_args, cancel_callback, cancel_args)
         self._title = title
         self._lshot = lshot
         self._rshot = rshot

@@ -332,7 +332,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         parts = command.name.split("/")
         for item_label in parts[:-1]:
             # see if there is already a sub-menu item
-            sub_panel = panel.sub_panel[item_label]
+            sub_panel = panel.sub_panels.get(item_label, None)
             if sub_panel:
                 # already have sub menu
                 panel = sub_panel
