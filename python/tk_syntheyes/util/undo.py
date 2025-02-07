@@ -6,6 +6,10 @@ class UndoBase:
     This is the common base class for the various undo-blocks (Begin/Accept) in SynthEyes. 
     Do not use this directly. Instead, use the correct subclass for your use-case.
     """
+
+    class Break(Exception):
+        """Custom exception to break ouf of the with statement."""
+
     def __init__(self, hlev: SyLevel, cancel_on_exc=True, accept_callback=None, accept_args=None, cancel_callback=None, cancel_args=None):
         self._hlev = hlev
         self._cancel_on_exc = cancel_on_exc
@@ -22,17 +26,24 @@ class UndoBase:
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self._accepted is None:
-            self._accepted = True
-            self._accept()
-            UndoBase._exec_callback(self._accept_callback, self._accept_args)
-        elif not self._accepted:
-            self._hlev.Cancel()
-            UndoBase._exec_callback(self._cancel_callback, self._cancel_args)
-        elif self._cancel_on_exc and exc_type:
+        if self._cancel_on_exc and exc_type and exc_type is not self.Break:
+            # An actual exception was raised, so cancel and undo
             self._accepted = False
             self._hlev.Cancel()
-            UndoBase._exec_callback(self._cancel_callback, self._cancel_args)
+            self._exec_callback(self._cancel_callback, self._cancel_args)
+        elif self._accepted is None:
+            # The accepted state did not change, thus, the undo block was passed successfully
+            self._accepted = True
+            self._accept()
+            self._exec_callback(self._accept_callback, self._accept_args)
+        elif not self._accepted:
+            # Cancel must have been called explicitly
+            self._hlev.Cancel()
+            self._exec_callback(self._cancel_callback, self._cancel_args)
+        
+        if exc_type == self.Break:
+            # If the raised Exception was a break signal, suprress the exception
+            return True
 
     @property
     def accepted(self):
@@ -44,6 +55,11 @@ class UndoBase:
         Internally, 'Cancel' is called instead of 'Accept' after exiting the current context (with-statement).
         """
         self._accepted = False
+        self.break_()
+
+    def break_(self):
+        """Breaks out of the context, i.e. the surrounding with statement."""
+        raise self.Break
 
     def _begin(self):
         raise NotImplementedError("This is meant to be used as a base class only. Use one of the available subclasses instead.")
@@ -57,7 +73,7 @@ class UndoBase:
             return
         if args is None:
             callback()
-        elif isinstance(args, Iterable):
+        elif isinstance(args, Iterable) and not isinstance(args, str):
             callback(*args)
         else:
             callback(args)
