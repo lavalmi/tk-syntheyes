@@ -41,6 +41,10 @@ class InbuiltApp(object):
         return {}
 
     @property
+    def full_name(self):
+        return f"{self.__module__}.{type(self).__name__}"
+
+    @property
     def is_user_app(self):
         is_user_app = getattr(self, "_is_user_app", None)
         if is_user_app is None:
