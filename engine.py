@@ -181,7 +181,7 @@ class SynthEyesEngine(Engine):
                     if cls != InbuiltApp and issubclass(cls, InbuiltApp):
                         ins = cls(self)
                         ins._is_user_app = is_user_path
-                        self._inbuilt_apps[cls_name] = ins
+                        self._inbuilt_apps[ins.full_name] = ins
 
         self._update_inbuilt_app_finder(loaded_pckgs)
         return self._inbuilt_apps
