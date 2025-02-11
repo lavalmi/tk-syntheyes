@@ -85,7 +85,7 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>206</width>
+           <width>210</width>
            <height>16</height>
           </rect>
          </property>
@@ -168,7 +168,7 @@
              <x>0</x>
              <y>0</y>
              <width>207</width>
-             <height>341</height>
+             <height>339</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="layout_left">
@@ -211,7 +211,7 @@
              <x>0</x>
              <y>0</y>
              <width>16</width>
-             <height>324</height>
+             <height>326</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="layout_right">
@@ -246,7 +246,7 @@
      <x>0</x>
      <y>0</y>
      <width>227</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -265,6 +265,8 @@
     <property name="title">
      <string>Settings</string>
     </property>
+    <addaction name="actionShow_Python"/>
+    <addaction name="separator"/>
     <addaction name="actionAuto_Resize"/>
     <addaction name="actionStays_On_Top"/>
     <addaction name="actionBorderless"/>
@@ -329,6 +331,14 @@
   <action name="actionMove_to_Cursor">
    <property name="text">
     <string>Move to Cursor</string>
+   </property>
+  </action>
+  <action name="actionShow_Python">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Python</string>
    </property>
   </action>
  </widget>

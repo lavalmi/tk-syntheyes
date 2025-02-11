@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'mainmFzMAR.ui'
+## Form generated from reading UI file 'mainUMzFQr.ui'
 ##
 ## Created by: Qt User Interface Compiler version 5.15.2
 ##
@@ -48,6 +48,9 @@ class Ui_MainWindow(object):
         self.actionRecenter_Window.setObjectName(u"actionRecenter_Window")
         self.actionMove_to_Cursor = QAction(MainWindow)
         self.actionMove_to_Cursor.setObjectName(u"actionMove_to_Cursor")
+        self.actionShow_Python = QAction(MainWindow)
+        self.actionShow_Python.setObjectName(u"actionShow_Python")
+        self.actionShow_Python.setCheckable(True)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.vertical_layout = QVBoxLayout(self.centralwidget)
@@ -79,7 +82,7 @@ class Ui_MainWindow(object):
         self.sca_quick_select.setWidgetResizable(True)
         self.sca_quick_select_contents = QWidget()
         self.sca_quick_select_contents.setObjectName(u"sca_quick_select_contents")
-        self.sca_quick_select_contents.setGeometry(QRect(0, 0, 206, 16))
+        self.sca_quick_select_contents.setGeometry(QRect(0, 0, 210, 16))
         sizePolicy.setHeightForWidth(self.sca_quick_select_contents.sizePolicy().hasHeightForWidth())
         self.sca_quick_select_contents.setSizePolicy(sizePolicy)
         self.verticalLayout = QVBoxLayout(self.sca_quick_select_contents)
@@ -106,7 +109,7 @@ class Ui_MainWindow(object):
         self.sca_left.setWidgetResizable(True)
         self.pnl_left = QWidget()
         self.pnl_left.setObjectName(u"pnl_left")
-        self.pnl_left.setGeometry(QRect(0, 0, 207, 341))
+        self.pnl_left.setGeometry(QRect(0, 0, 207, 339))
         self.layout_left = QVBoxLayout(self.pnl_left)
         self.layout_left.setSpacing(0)
         self.layout_left.setObjectName(u"layout_left")
@@ -123,7 +126,7 @@ class Ui_MainWindow(object):
         self.sca_right.setWidgetResizable(True)
         self.pnl_right = QWidget()
         self.pnl_right.setObjectName(u"pnl_right")
-        self.pnl_right.setGeometry(QRect(0, 0, 16, 324))
+        self.pnl_right.setGeometry(QRect(0, 0, 16, 326))
         self.layout_right = QVBoxLayout(self.pnl_right)
         self.layout_right.setSpacing(0)
         self.layout_right.setObjectName(u"layout_right")
@@ -143,7 +146,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 227, 21))
+        self.menubar.setGeometry(QRect(0, 0, 227, 22))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuSettings = QMenu(self.menubar)
@@ -162,6 +165,8 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionOpen_Console)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionExit_SynthEyes)
+        self.menuSettings.addAction(self.actionShow_Python)
+        self.menuSettings.addSeparator()
         self.menuSettings.addAction(self.actionAuto_Resize)
         self.menuSettings.addAction(self.actionStays_On_Top)
         self.menuSettings.addAction(self.actionBorderless)
@@ -180,6 +185,7 @@ class Ui_MainWindow(object):
         self.actionMinimize_Window.setText(QCoreApplication.translate("MainWindow", u"Minimize Window", None))
         self.actionRecenter_Window.setText(QCoreApplication.translate("MainWindow", u"Recenter Window", None))
         self.actionMove_to_Cursor.setText(QCoreApplication.translate("MainWindow", u"Move to Cursor", None))
+        self.actionShow_Python.setText(QCoreApplication.translate("MainWindow", u"Show Python", None))
         self.btn_quick_select.setText("")
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuSettings.setTitle(QCoreApplication.translate("MainWindow", u"Settings", None))
