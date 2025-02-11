@@ -10,9 +10,11 @@
 
 import os
 import sys
+from configparser import SafeConfigParser
 
 import sgtk
 from sgtk.platform import LaunchInformation, SoftwareLauncher
+
 
 class SynthEyesLauncher(SoftwareLauncher):
     """
@@ -63,10 +65,22 @@ class SynthEyesLauncher(SoftwareLauncher):
             args = " ".join([args, "-start", startup_path])
 
         # Set the syntheyes python path to point to the shotgun python executable to ensure package compatibility. Ignore this If the path is already present to allow overwriting the default path if necessary.
-        # Use the python or pythonw executable, depending on the environment specifications. pythonw is the default.
+        # Use the python or pythonw executable, depending on the custom syntheyes config file in the user path. pythonw is the default.
         if not os.environ.get("SYNTHEYES_PYTHON_PATH"):
-            show_console = os.environ.get("SYNTHEYES_SHOW_CONSOLE")
-            show_console = show_console is not None and show_console.lower() in ("true", "yes", "y", "1", "on")
+            # Load visibility setting from sgtk SynthEyes config
+            user_path = os.path.expandvars(os.path.expanduser({
+                "darwin": "~/Library/Application Support/SynthEyes",
+                "win32": "%APPDATA%/SynthEyes",
+                "linux": "~/.SynthEyes"}[sys.platform])
+            )
+            config = SafeConfigParser()
+
+            try:
+                config.read(os.path.join(user_path, 'sgtk_tk-syntheyes.ini'))
+                show_console = config.getboolean("Python", "show")
+            except Exception:
+                show_console = False
+
             os.environ["SYNTHEYES_PYTHON_PATH"] = sys.executable if show_console else "w".join(os.path.splitext(sys.executable))
 
         # Check the engine settings to see whether any plugins have been

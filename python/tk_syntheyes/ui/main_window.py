@@ -1,6 +1,3 @@
-import importlib
-import importlib.util
-import inspect
 import os
 import sys
 import time
@@ -10,9 +7,9 @@ from engine import SynthEyesEngine
 from PySide2.QtCore import (Property, QEasingCurve, QEvent, QPropertyAnimation,
                             QSize, Qt, Signal, Slot)
 from PySide2.QtGui import QCursor, QGuiApplication, QKeySequence
-from PySide2.QtWidgets import (QApplication, QBoxLayout, QLayout, QLayoutItem,
-                               QMainWindow, QMenuBar, QMessageBox, QPushButton,
-                               QVBoxLayout, QWidget)
+from PySide2.QtWidgets import (QApplication, QBoxLayout, QLayout,
+                               QLayoutItem, QMainWindow, QMenuBar, QMessageBox,
+                               QPushButton, QVBoxLayout, QWidget)
 from tk_syntheyes import logging_console
 from tk_syntheyes.app_command import AppCommand
 from tk_syntheyes.inbuilt_app import InbuiltApp
@@ -43,6 +40,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.click_pos = None
         self._menu_click_time = time.time()
         
+        self._show_python = self.actionShow_Python.isChecked
+        self.actionShow_Python.triggered.connect(self.info_on_toggle_show_python)
         self._auto_resize = self.actionAuto_Resize.isChecked
         self._stays_on_top = self.actionStays_On_Top.isChecked
         self._borderless = self.actionBorderless.isChecked
@@ -65,7 +64,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.generate_panels()
 
         # Initialize quick select
-        self.btn_quick_select.clicked.connect(lambda: self._switch_quick_select())
+        self.btn_quick_select.clicked.connect(self._switch_quick_select)
 
         ### Setup animations ###
         self._anim_panel_transition = QPropertyAnimation(self, b"panel_split_factor", self)
@@ -665,6 +664,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not os.path.exists(config_dir):
             os.makedirs(config_dir)
 
+        if not self._config.has_section("Python"):
+            self._config.add_section("Python")
+        self._config.set("Python", "show", str(self._show_python()))
+
         ### Save UI state to config ###
         if not self._config.has_section("UI"):
             self._config.add_section("UI")
@@ -704,6 +707,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.resize(int(size[0]), int(size[1]))
         except:
             pass
+        # show python; Only for menu, this setting has to be read way earlier
+        self.actionShow_Python.setChecked(self._config.getboolean("Python", "show", fallback=self._show_python()))
         # auto_resize
         self.actionAuto_Resize.setChecked(self._config.getboolean("UI", "auto_resize", fallback=self._auto_resize()))
         # stays_on_top
@@ -717,3 +722,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ######################
         
         return success
+    
+
+    def info_on_toggle_show_python(self):
+        self.message_box(QMessageBox.Icon.Information, "Requires restart", "Restarting SynthEyes via ShotGrid is required in order for this setting to take effect.")

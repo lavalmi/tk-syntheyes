@@ -14,6 +14,7 @@ It sets up the Toolkit context and prepares the tk-syntheyes engine.
 """
 import os
 import sys
+import traceback
 
 import sgtk
 
@@ -102,7 +103,12 @@ def start_toolkit():
 #input("...")
 
 # Fire up Toolkit and the environment engine
-start_toolkit()
-
-if g_engine:
-    sys.exit(g_engine.qt_app.exec_())
+try:
+    start_toolkit()
+except Exception as e:
+    print("".join(traceback.format_exception(e)))
+    input("ERROR: Could not start the sgtk-SynthEyes-engine.\nHit Enter to exit...")
+    raise e
+else:
+    if g_engine:
+        sys.exit(g_engine.qt_app.exec_())
