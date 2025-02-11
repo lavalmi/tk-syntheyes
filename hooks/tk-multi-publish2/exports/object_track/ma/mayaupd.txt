@@ -18,4 +18,4 @@ s embedMeshes 3200
 s from_prefix 00
 s to_prefix 00
 d far_clip 10
-d enhance 0
+d enhance 1
