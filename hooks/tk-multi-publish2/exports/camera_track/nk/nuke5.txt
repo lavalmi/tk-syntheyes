@@ -1,7 +1,7 @@
 s workarea 3200
 d userStart 0
 d rescale 1
-d useLensDistort 0
+d useLensDistort 1
 d allowSolverDistortion 0
 s mapext 65787200
 s writeOBJs 3000
