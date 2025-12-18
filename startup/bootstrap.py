@@ -27,7 +27,6 @@ def start_toolkit_classic():
     the tk-syntheyes engine and environment.
     """
     logger = sgtk.LogManager.get_logger(__name__)
-
     logger.debug("Launching toolkit in classic mode.")
 
     # Get the name of the engine to start from the environement
@@ -63,7 +62,7 @@ def start_toolkit_classic():
         raise sgtk.TankError(
             "Flow Production Tracking: Could not start engine: %s" % e
         )
-    
+
     logger.debug("Successfully launched toolkit.")
 
 
@@ -72,15 +71,6 @@ def start_toolkit():
     Import Toolkit and start up a tk-syntheyes engine based on
     environment variables.
     """
-
-    # Verify sgtk can be loaded.
-    try:
-        import sgtk
-    except Exception as e:
-        raise sgtk.TankError(
-            "Flow Production Tracking: Could not import sgtk! Disabling for now: %s" % e
-        )
-
     # start up toolkit logging to file
     sgtk.LogManager().initialize_base_file_handler("tk-syntheyes")
 
@@ -99,16 +89,13 @@ def start_toolkit():
             del os.environ[var]
 
 
-#import threading
-#input("...")
-
 # Fire up Toolkit and the environment engine
 try:
     start_toolkit()
 except Exception as e:
     print("".join(traceback.format_exception(e)))
-    input("ERROR: Could not start the sgtk-SynthEyes-engine.\nHit Enter to exit...")
+    sgtk.log.logging.error("Could not start the tk-syntheyes.")
     raise e
 else:
     if g_engine:
-        sys.exit(g_engine.qt_app.exec_())
+        sys.exit(g_engine.qt_app.exec())

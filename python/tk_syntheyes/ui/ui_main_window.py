@@ -1,24 +1,32 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'mainUMzFQr.ui'
+## Form generated from reading UI file 'mainsOapGH.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 6.10.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
-
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
+    QCursor, QFont, QFontDatabase, QGradient,
+    QIcon, QImage, QKeySequence, QLinearGradient,
+    QPainter, QPalette, QPixmap, QRadialGradient,
+    QTransform)
+from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QMainWindow,
+    QMenu, QMenuBar, QPushButton, QScrollArea,
+    QSizePolicy, QSpacerItem, QStatusBar, QVBoxLayout,
+    QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(227, 417)
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
@@ -59,7 +67,7 @@ class Ui_MainWindow(object):
         self.vertical_layout.setContentsMargins(0, 0, 0, 0)
         self.btn_quick_select = QPushButton(self.centralwidget)
         self.btn_quick_select.setObjectName(u"btn_quick_select")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.btn_quick_select.sizePolicy().hasHeightForWidth())
@@ -73,23 +81,23 @@ class Ui_MainWindow(object):
         self.main_split_layout.setObjectName(u"main_split_layout")
         self.sca_quick_select = QScrollArea(self.centralwidget)
         self.sca_quick_select.setObjectName(u"sca_quick_select")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
         sizePolicy2.setHorizontalStretch(0)
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.sca_quick_select.sizePolicy().hasHeightForWidth())
         self.sca_quick_select.setSizePolicy(sizePolicy2)
-        self.sca_quick_select.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.sca_quick_select.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.sca_quick_select.setWidgetResizable(True)
         self.sca_quick_select_contents = QWidget()
         self.sca_quick_select_contents.setObjectName(u"sca_quick_select_contents")
-        self.sca_quick_select_contents.setGeometry(QRect(0, 0, 210, 16))
+        self.sca_quick_select_contents.setGeometry(QRect(0, 0, 209, 16))
         sizePolicy.setHeightForWidth(self.sca_quick_select_contents.sizePolicy().hasHeightForWidth())
         self.sca_quick_select_contents.setSizePolicy(sizePolicy)
         self.verticalLayout = QVBoxLayout(self.sca_quick_select_contents)
         self.verticalLayout.setSpacing(6)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(4, 4, 4, 4)
-        self.verticalSpacer = QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
+        self.verticalSpacer = QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.MinimumExpanding)
 
         self.verticalLayout.addItem(self.verticalSpacer)
 
@@ -105,11 +113,11 @@ class Ui_MainWindow(object):
         self.sca_left.setObjectName(u"sca_left")
         sizePolicy2.setHeightForWidth(self.sca_left.sizePolicy().hasHeightForWidth())
         self.sca_left.setSizePolicy(sizePolicy2)
-        self.sca_left.setFrameShape(QFrame.NoFrame)
+        self.sca_left.setFrameShape(QFrame.Shape.NoFrame)
         self.sca_left.setWidgetResizable(True)
         self.pnl_left = QWidget()
         self.pnl_left.setObjectName(u"pnl_left")
-        self.pnl_left.setGeometry(QRect(0, 0, 207, 339))
+        self.pnl_left.setGeometry(QRect(0, 0, 207, 325))
         self.layout_left = QVBoxLayout(self.pnl_left)
         self.layout_left.setSpacing(0)
         self.layout_left.setObjectName(u"layout_left")
@@ -122,11 +130,11 @@ class Ui_MainWindow(object):
         self.sca_right.setObjectName(u"sca_right")
         sizePolicy2.setHeightForWidth(self.sca_right.sizePolicy().hasHeightForWidth())
         self.sca_right.setSizePolicy(sizePolicy2)
-        self.sca_right.setFrameShape(QFrame.NoFrame)
+        self.sca_right.setFrameShape(QFrame.Shape.NoFrame)
         self.sca_right.setWidgetResizable(True)
         self.pnl_right = QWidget()
         self.pnl_right.setObjectName(u"pnl_right")
-        self.pnl_right.setGeometry(QRect(0, 0, 16, 326))
+        self.pnl_right.setGeometry(QRect(0, 0, 16, 313))
         self.layout_right = QVBoxLayout(self.pnl_right)
         self.layout_right.setSpacing(0)
         self.layout_right.setObjectName(u"layout_right")
@@ -146,7 +154,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 227, 22))
+        self.menubar.setGeometry(QRect(0, 0, 227, 33))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuSettings = QMenu(self.menubar)

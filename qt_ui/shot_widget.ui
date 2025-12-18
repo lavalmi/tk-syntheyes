@@ -91,10 +91,10 @@
    <item row="10" column="1">
     <spacer name="spc_center">
      <property name="orientation">
-      <enum>Qt::Vertical</enum>
+      <enum>Qt::Orientation::Vertical</enum>
      </property>
      <property name="sizeType">
-      <enum>QSizePolicy::MinimumExpanding</enum>
+      <enum>QSizePolicy::Policy::MinimumExpanding</enum>
      </property>
      <property name="sizeHint" stdset="0">
       <size>
@@ -113,7 +113,7 @@
       </sizepolicy>
      </property>
      <property name="layoutDirection">
-      <enum>Qt::LeftToRight</enum>
+      <enum>Qt::LayoutDirection::LeftToRight</enum>
      </property>
      <property name="styleSheet">
       <string notr="true"/>
@@ -229,7 +229,7 @@
       <bool>true</bool>
      </property>
      <property name="arrowType">
-      <enum>Qt::LeftArrow</enum>
+      <enum>Qt::ArrowType::LeftArrow</enum>
      </property>
     </widget>
    </item>
@@ -274,7 +274,7 @@
       </sizepolicy>
      </property>
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
@@ -287,7 +287,7 @@
       </sizepolicy>
      </property>
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>

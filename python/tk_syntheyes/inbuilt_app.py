@@ -1,5 +1,5 @@
-from PySide2.QtWidgets import QMessageBox
-from PySide2.QtCore import Qt
+from PySide6.QtWidgets import QMessageBox
+from PySide6.QtCore import Qt
 
 class InbuiltApp(object):
     @property

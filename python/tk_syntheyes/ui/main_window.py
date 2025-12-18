@@ -4,10 +4,10 @@ import time
 from configparser import SafeConfigParser
 
 from engine import SynthEyesEngine
-from PySide2.QtCore import (Property, QEasingCurve, QEvent, QPropertyAnimation,
+from PySide6.QtCore import (Property, QEasingCurve, QEvent, QPropertyAnimation,
                             QSize, Qt, Signal, Slot)
-from PySide2.QtGui import QCursor, QGuiApplication, QKeySequence
-from PySide2.QtWidgets import (QApplication, QBoxLayout, QLayout,
+from PySide6.QtGui import QCursor, QGuiApplication, QKeySequence
+from PySide6.QtWidgets import (QApplication, QBoxLayout, QLayout,
                                QLayoutItem, QMainWindow, QMenuBar, QMessageBox,
                                QPushButton, QVBoxLayout, QWidget)
 from tk_syntheyes import logging_console
@@ -20,7 +20,7 @@ from tk_syntheyes.ui.ui_main_window import Ui_MainWindow
 class MainWindow(QMainWindow, Ui_MainWindow):
 
     _exit_signal = Signal()
-    
+
     @Slot()
     def _on_exit_signal(self):
         self.exit()
@@ -39,7 +39,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.console = logging_console.LogConsole(self)
         self.click_pos = None
         self._menu_click_time = time.time()
-        
+
         self._show_python = self.actionShow_Python.isChecked
         self.actionShow_Python.triggered.connect(self.info_on_toggle_show_python)
         self._auto_resize = self.actionAuto_Resize.isChecked
@@ -55,11 +55,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.setWindowFlag(Qt.WindowMinimizeButtonHint, False)
         self.setWindowFlag(Qt.WindowMaximizeButtonHint, False)
-                
+
         self._left_panel_active = True
-        self._panels = []        
+        self._panels = []
         self._minimize_on_close = True
-        
+
         # Generate panels
         self.generate_panels()
 
@@ -87,10 +87,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionMinimize_Window.triggered.connect(self.minimize)
         self.actionRecenter_Window.triggered.connect(self.recenter_window)
         self.actionMove_to_Cursor.triggered.connect(self.move_window_to_cursor)
-        
+
         # Connect shortcuts to actions
-        self.actionRecenter_Window.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_R))
-        self.actionMove_to_Cursor.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_M))
+        self.actionRecenter_Window.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_R))
+        self.actionMove_to_Cursor.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_M))
 
         # Setup menu bar move on drag behaviour
         self.menubar: QMenuBar
@@ -108,7 +108,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.click_pos = event.globalPos()
                 event.accept()
                 return
-        
+
         self.menubar.defaultMouseMoveEvent(event)
 
     def recenter_window(self):
@@ -116,7 +116,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         fg = self.frameGeometry()
         fg.moveCenter(screen.geometry().center())
         self.move(fg.topLeft())
-    
+
     def move_window_to_cursor(self):
         self.move(QCursor().pos())
 
@@ -127,14 +127,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setFocus()
         self.raise_()
         self.menubar.defaultMousePressEvent(event)
-    
+
     def menu_double_click_event(self, event):
         if (time.time() - self._menu_click_time) * 1000 < 175: #ms
             self.minimize()
             event.accept()
         else:
             self.menubar.defaultMouseDoubleClickEvent(event)
-    
+
     def changeEvent(self, event):
         if getattr(self, "_suppressed", None):
             if event.type() == QEvent.WindowStateChange:
@@ -170,14 +170,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         stretch_steps = self.get_layout_stretch_steps(layout)
         layout.setStretch(0, round(factor * stretch_steps))
         layout.setStretch(1, round((1 - factor) * stretch_steps))
-    
+
     ### Properties ###
     def set_main_panel_split_factor(self, factor: float):
         self.set_split_factor(self.main_split_layout, factor)
 
     def get_main_panel_split_factor(self):
         return self.get_split_factor(self.main_split_layout)
-    
+
     def set_split_panel_split_factor(self, factor: float):
         self.set_split_factor(self.panel_split_layout, factor)
 
@@ -197,7 +197,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if name in parent_panel.sub_panels:
                 self._engine.logger.debug("%s already exists in parent panel %s", name, parent_panel.name)
                 return None
-        
+
         panel = panel_type(self)
         panel.setVisible(visible)
         panel.setEnabled(enabled)
@@ -238,7 +238,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     cmd.favourite = True
 
             cmds.append(cmd)
-        
+
         # Add inbuilt apps
         app: InbuiltApp
         num_user_cmds = 0
@@ -250,7 +250,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 if cmd.is_valid and props and (not "environment" in props or self._engine.environment["name"] in props["environment"]):
                     cmds.append(cmd)
                     num_user_cmds += cmd._is_user_command
-            
+
         # Sort list of commands in name order
         cmds.sort(key=lambda x: x.name) #TODO incorrect sorting at times
 
@@ -263,7 +263,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         user_cmds_by_app = {}
         fav_pos = 2
 
-        for cmd in cmds:            
+        for cmd in cmds:
             if cmd.get_type() == "context_menu":
                 # context menu
                 self._add_command_button(cmd, self._context_panel)
@@ -279,7 +279,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     app_name = "Other Items"
 
                 app_cmds = user_cmds_by_app if getattr(cmd, "_is_user_command", None) else cmds_by_app
-                
+
                 if not app_name in app_cmds:
                     app_cmds[app_name] = []
                 app_cmds[app_name].append(cmd)
@@ -297,7 +297,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def _add_apps_to_panel(self, cmds_by_app, root_panel: BasePanel):
         # Now add all apps to panel
         for app_name in sorted(cmds_by_app.keys()):
-            if len(cmds_by_app[app_name]) > 1:                
+            if len(cmds_by_app[app_name]) > 1:
                 # more than one menu entry for this app
                 # make a sub menu and put all items in the sub menu
                 app_panel: BasePanel = self._init_panel(BasePanel, app_name, root_panel)
@@ -345,7 +345,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Finally create the command button
         return panel.insert_button(None, parts[-1], description, -1, command.callback)
-    
+
 
     def _link_panel(self, button, panel_to):
         """Link the given button to a panel. Clicking the button will start the panel switching transition to display the corresponding UI elements."""
@@ -366,10 +366,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for panel in self._panels:
             panel.deleteLater()
         self._panels.clear()
-                
+
         # Generate the UI again with the new context
         self.generate_panels()
-        
+
 
     def generate_panels(self):
         ### Initialize panels ###
@@ -421,8 +421,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         dev_panel: BasePanel = self._init_panel(BasePanel, "DEV", self._main_panel)
         self._link_panel(self._main_panel.insert_menu_button(dev_panel), dev_panel)
         return dev_panel
-        
-    def generate_user_panel(self):        
+
+    def generate_user_panel(self):
         user_panel: BasePanel = self._init_panel(BasePanel, "User", self._main_panel)
         self._link_panel(self._main_panel.insert_menu_button(user_panel), user_panel)
         return user_panel
@@ -444,7 +444,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def find_children_of_type(self, type: type):
         queue = [self]
         result = []
-        
+
         while queue:
             current = queue.pop(0)
             for child in current.children():
@@ -454,19 +454,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     queue.append(child)
         return result
 
-    
+
     def _switch_panel(self, target_panel: QWidget, easing_curve_type:QEasingCurve.Type=QEasingCurve.OutBounce, amplitude:float=0.25):
         """Initiate switching the currently displayed panel to another by starting an animation."""
         if self.btn_quick_select.isChecked():
             self.btn_quick_select.setChecked(False)
             self._switch_quick_select()
-        
+
         # Check if the target panel is already active anyways
         active_layout: QLayout = self.pnl_left.layout() if self._left_panel_active else self.pnl_right.layout()
         active_panel = active_layout.itemAt(0).widget()
         if target_panel == active_panel:
             return
-        
+
         # Disable panel during animation
         self.setEnabled(False)
         self._anim_panel_transition.stop()
@@ -474,7 +474,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Identify direction of the animation based on current and targeted panel depth
         left_to_right = getattr(target_panel, "panel_depth", 0) >= self._active_panel_depth
 
-        # Change panel name 
+        # Change panel name
         self.btn_quick_select.setText(target_panel.name)
 
         self._active_panel_depth += 1 if left_to_right else -1
@@ -497,7 +497,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         target_panel.setVisible(True)
         target_panel.setEnabled(True)
         panel_to.layout().addWidget(target_panel)
-        
+
         split_factor = self.get_split_panel_split_factor()
         duration = 200 * (1 - split_factor if split_factor < end_value else split_factor)
 
@@ -505,7 +505,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self._anim_panel_transition.setDuration(duration)
         self._anim_panel_transition.setEndValue(end_value)
-    
+
         easing_curve = QEasingCurve(easing_curve_type)
         easing_curve.setAmplitude(amplitude)
         self._anim_panel_transition.setEasingCurve(easing_curve)
@@ -513,8 +513,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.sca_left.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.sca_right.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.sca_left.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.sca_right.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)        
-        
+        self.sca_right.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
         if self._auto_resize():
             # Adjust geometry of the window to fix the new panel
             pref_size = self._get_preferred_panel_size(target_panel)
@@ -525,7 +525,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self._anim_panel_transition.start()
 
-   
+
     def _switch_panel_finished(self):
         """Wrap up the panel transition to ensure the UI can be properly used. This is automatically triggered once the respective animation has finished."""
         panel = self.pnl_right if self._left_panel_active else self.pnl_left
@@ -542,7 +542,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.sca_right.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.setEnabled(True)
 
-   
+
     def _switch_quick_select(self):
         """Open the quick select panel by starting an animation."""
         self._anim_panel_quick_select_transition.stop()
@@ -560,7 +560,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._anim_panel_quick_select_transition.setDuration(duration)
         self._anim_panel_quick_select_transition.start()
 
-  
+
     def _switch_quick_select_finished(self):
         """Wrap up the quick select panel transition to ensure the UI can be properly used. This is automatically triggered once the respective animation has finished."""
         self.sca_quick_select.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -602,7 +602,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self._update_flags:
             self.show()
 
-    
+
     def to_front(self, all_windows=True):
         if all_windows:
             for window in QApplication.allWindows():
@@ -610,8 +610,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 window.activateWindow()
         else:
             self.activateWindow()
-            
-  
+
+
     def open_logging_console(self):
         self.console.show()
         self.console.activateWindow()
@@ -630,7 +630,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def message_box(self, icon, title, text, buttons=QMessageBox.Ok, parent=None, flags=Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint | Qt.WindowStaysOnTopHint):
         msg_box = QMessageBox(icon, title, text, buttons, parent, flags)
         msg_box.setAttribute(Qt.WA_DeleteOnClose, True)
-        
+
         if parent:
             screen = QGuiApplication.screenAt(QCursor().pos())
             fg = msg_box.frameGeometry()
@@ -645,13 +645,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.statusBar.showMessage(text, timeout)
 
 ### Config #####################################################################
-    
+
     def _user_path(self):
         user_path = {"darwin": "~/Library/Application Support/SynthEyes",
                     "win32": "%APPDATA%/SynthEyes",
                     "linux": "~/.SynthEyes"}[sys.platform]
         return os.path.expandvars(os.path.expanduser(user_path))
-    
+
 
     def _config_path(self):
         return os.path.join(self._user_path(), 'sgtk_tk-syntheyes.ini')
@@ -690,7 +690,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except Exception as e:
             self._engine.logger.info("Could not read tk-syntheyes config: %s", e)
             success = False
-        
+
         ### Setup UI defaults ###
         self._update_flags = False
         # pos
@@ -720,9 +720,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._update_flags = True
         self.show()
         ######################
-        
+
         return success
-    
+
 
     def info_on_toggle_show_python(self):
         self.message_box(QMessageBox.Icon.Information, "Requires restart", "Restarting SynthEyes via ShotGrid is required in order for this setting to take effect.")

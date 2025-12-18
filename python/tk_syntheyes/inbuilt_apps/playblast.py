@@ -4,7 +4,7 @@ import time
 
 import sgtk
 from engine import SynthEyesEngine
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox
 from tk_syntheyes.inbuilt_app import InbuiltApp
 from tk_syntheyes.util.timer import Timer
 from tk_syntheyes.util.undo import Undo, UndoShotChanges
