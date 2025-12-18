@@ -283,7 +283,7 @@ class SynthEyesEngine(Engine):
 
         # tell QT to interpret C strings as utf-8
         # these imports won't work on top of the file as these aren't available at that time
-        # and regular PySide2 does not know the function setCodecForCStrings
+        # and regular PySide6 does not know the function setCodecForCStrings
         from sgtk.platform.qt import QtCore, QtGui
         utf8 = QtCore.QTextCodec.codecForName("utf-8")
         QtCore.QTextCodec.setCodecForCStrings(utf8)

@@ -1,6 +1,6 @@
-from PySide2.QtCore import QSize, Qt
-from PySide2.QtGui import QIcon
-from PySide2.QtWidgets import (QFrame, QPushButton, QSizePolicy, QToolButton,
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import (QFrame, QPushButton, QSizePolicy, QToolButton,
                                QWidget)
 from tk_syntheyes.ui.ui_base_panel import Ui_BasePanel
 

@@ -8,7 +8,7 @@
 # agreement to the MIT License. All rights not expressly granted therein are
 # reserved by Sebastian Kral.
 
-from PySide2 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 
 class LogConsole(QtWidgets.QDialog):
@@ -21,7 +21,7 @@ class LogConsole(QtWidgets.QDialog):
         self.layout.addWidget(self.logs)
 
         # configure the text widget
-        self.logs.setLineWrapMode(self.logs.NoWrap)
+        self.logs.setLineWrapMode(self.logs.LineWrapMode.NoWrap)
         self.logs.setReadOnly(True)
 
         # load up previous size
@@ -35,7 +35,7 @@ class LogConsole(QtWidgets.QDialog):
     def append_to_log(self, text):
         self.logs.appendHtml(text)
         cursor = self.logs.textCursor()
-        cursor.movePosition(cursor.End)
-        cursor.movePosition(cursor.StartOfLine)
+        cursor.movePosition(cursor.MoveOperation.End)
+        cursor.movePosition(cursor.MoveOperation.StartOfLine)
         self.logs.setTextCursor(cursor)
         self.logs.ensureCursorVisible()

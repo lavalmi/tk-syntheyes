@@ -73,10 +73,10 @@
    <item row="0" column="1">
     <spacer name="spc_center">
      <property name="orientation">
-      <enum>Qt::Vertical</enum>
+      <enum>Qt::Orientation::Vertical</enum>
      </property>
      <property name="sizeType">
-      <enum>QSizePolicy::MinimumExpanding</enum>
+      <enum>QSizePolicy::Policy::MinimumExpanding</enum>
      </property>
      <property name="sizeHint" stdset="0">
       <size>
